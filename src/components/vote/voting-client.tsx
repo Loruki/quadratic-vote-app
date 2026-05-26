@@ -3,14 +3,15 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useIsClient } from '@/hooks/use-is-client';
 import { canAffordAnyMoreVote, creditCost, remainingCredits, totalCreditsSpent } from '@/lib/quadratic';
 import { BudgetBar } from './budget-bar';
 import { OptionCard } from './option-card';
 import { SubmitDialog } from './submit-dialog';
-import { TooltipWalkthrough } from './tooltip-walkthrough';
+import { VotingHintBanner } from './voting-hint-banner';
 
 interface Props {
   pollId: string;
@@ -22,7 +23,10 @@ interface Props {
 
 type AllocationMap = Record<string, number>;
 
-const WALKTHROUGH_KEY = 'qv_walkthrough_seen';
+// Replaces the older `qv_walkthrough_seen` modal flag — the modal got
+// dismissed without being read, so we moved to an inline banner with its
+// own flag (separate so reverting wouldn't surprise returning users).
+const HINT_KEY = 'qv_voting_hint_seen';
 
 export function VotingClient({
   pollId,
@@ -32,15 +36,19 @@ export function VotingClient({
   voterLabel,
 }: Props) {
   const router = useRouter();
+  const isClient = useIsClient();
   const [allocations, setAllocations] = useState<AllocationMap>(() =>
     Object.fromEntries(options.map((o) => [o.id, 0])),
   );
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [showWalkthrough, setShowWalkthrough] = useState(() => {
+  const [hintExplicitlyDismissed, setHintExplicitlyDismissed] = useState(false);
+  // Read-once on mount: was this voter previously taught? Only effective
+  // after isClient flips true, which avoids the hydration mismatch.
+  const [hintSeenBefore] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     try {
-      return !window.localStorage.getItem(WALKTHROUGH_KEY);
+      return window.localStorage.getItem(HINT_KEY) === '1';
     } catch {
       return false;
     }
@@ -55,6 +63,24 @@ export function VotingClient({
   const remaining = remainingCredits(allocationsList, creditsPerVoter);
   const stranded = remaining > 0 && !canAffordAnyMoreVote(allocationsList, creditsPerVoter);
   const hasAnyVote = allocationsList.some((a) => a.numVotes !== 0);
+
+  // Persist the dismissal once the banner has done its job — whether the
+  // voter clicked X explicitly or just started voting. No need to setState
+  // here (we already infer dismissed-ness from `hintExplicitlyDismissed ||
+  // hasAnyVote`); we just write through to storage.
+  useEffect(() => {
+    if (!isClient) return;
+    if (hintExplicitlyDismissed || hasAnyVote) {
+      try {
+        window.localStorage.setItem(HINT_KEY, '1');
+      } catch {
+        /* noop */
+      }
+    }
+  }, [isClient, hintExplicitlyDismissed, hasAnyVote]);
+
+  const showHint =
+    isClient && !hintSeenBefore && !hintExplicitlyDismissed && !hasAnyVote;
 
   function change(optionId: string, direction: 1 | -1) {
     setAllocations((prev) => {
@@ -97,15 +123,6 @@ export function VotingClient({
     }
   }
 
-  function dismissWalkthrough() {
-    setShowWalkthrough(false);
-    try {
-      window.localStorage.setItem(WALKTHROUGH_KEY, '1');
-    } catch {
-      /* noop */
-    }
-  }
-
   return (
     <div className="mt-6">
       {voterLabel && (
@@ -117,6 +134,16 @@ export function VotingClient({
         </div>
       )}
       <BudgetBar spent={spent} budget={creditsPerVoter} />
+
+      <AnimatePresence>
+        {showHint && (
+          <VotingHintBanner
+            creditsPerVoter={creditsPerVoter}
+            optionsCount={options.length}
+            onDismiss={() => setHintExplicitlyDismissed(true)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {stranded && (
@@ -170,12 +197,6 @@ export function VotingClient({
           </Button>
         </div>
       </div>
-
-      <TooltipWalkthrough
-        open={showWalkthrough}
-        creditsPerVoter={creditsPerVoter}
-        onClose={dismissWalkthrough}
-      />
 
       <SubmitDialog
         open={confirmOpen}

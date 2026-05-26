@@ -13,7 +13,7 @@ test('full flow: landing → create → vote → results', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Option 3' }).fill('Tacos');
 
   // Skip the first-visit walkthrough on the voter page by pre-seeding the flag.
-  await page.addInitScript(() => window.localStorage.setItem('qv_walkthrough_seen', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('qv_voting_hint_seen', '1'));
 
   // New flow: button opens the confirm dialog first, then "Yes, create".
   await page.getByRole('button', { name: /review & create/i }).click();
@@ -28,9 +28,16 @@ test('full flow: landing → create → vote → results', async ({ page }) => {
   await page.getByRole('link', { name: /open voter page/i }).click();
   await expect(page).toHaveURL(/\/poll\/[^/]+$/);
 
-  await page.getByRole('button', { name: /add a vote to Pizza/i }).click();
-  await page.getByRole('button', { name: /add a vote to Pizza/i }).click();
-  await page.getByRole('button', { name: /add a vote to Sushi/i }).click();
+  // Cast a realistic ballot: 6 votes on Pizza (36 credits) + 3 on Sushi
+  // (9 credits) = 45/100 credits, above the 30% low-usage warning
+  // threshold. The submit dialog should show the normal "Submit vote"
+  // primary button, not "Submit anyway".
+  for (let i = 0; i < 6; i++) {
+    await page.getByRole('button', { name: /add a vote to Pizza/i }).click();
+  }
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole('button', { name: /add a vote to Sushi/i }).click();
+  }
 
   // Open the confirmation dialog, then confirm.
   await page.getByRole('button', { name: 'Submit vote' }).click();
@@ -39,6 +46,37 @@ test('full flow: landing → create → vote → results', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/results$/);
   await expect(page.getByText(/1 voter/i)).toBeVisible();
+});
+
+test('one-click submitters get warned about unspent credits', async ({ page, request }) => {
+  // Create an open poll directly via API to skip the create-form ceremony.
+  const created = await request.post('/api/polls', {
+    data: {
+      title: 'Low-usage warning test',
+      options: ['A', 'B', 'C'],
+      creditsPerVoter: 100,
+    },
+  });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+
+  // Pre-seed the hint flag so the banner doesn't get in the way — we
+  // explicitly want to test the SUBMIT-side safety net.
+  await page.addInitScript(() => window.localStorage.setItem('qv_voting_hint_seen', '1'));
+
+  await page.goto(`/poll/${id}`);
+  // Cast a single vote (1 credit / 100 = 1% — well under the 30% threshold).
+  await page.getByRole('button', { name: /add a vote to A/i }).click();
+  await page.getByRole('button', { name: 'Submit vote' }).click();
+
+  // The dialog should surface the warning copy and a "Keep voting" primary.
+  await expect(page.getByText(/still have 99 credits unspent/i)).toBeVisible();
+  await expect(
+    page.getByRole('dialog').getByRole('button', { name: /keep voting/i }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('dialog').getByRole('button', { name: /submit anyway/i }),
+  ).toBeVisible();
 });
 
 test('budget exceeded API rejects oversized allocations', async ({ request }) => {

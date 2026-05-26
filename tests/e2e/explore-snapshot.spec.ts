@@ -41,7 +41,7 @@ test('capture explore + tokenized flow screenshots', async ({ page, request }) =
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(voterTokens[0].url);
   await page.waitForLoadState('networkidle');
-  await page.evaluate(() => window.localStorage.setItem('qv_walkthrough_seen', '1'));
+  await page.evaluate(() => window.localStorage.setItem('qv_voting_hint_seen', '1'));
   await page.reload();
   await page.waitForLoadState('networkidle');
   await page.screenshot({ path: 'screenshots/11-tokenized-voter.png', fullPage: true });

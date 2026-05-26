@@ -24,17 +24,20 @@ test('capture screenshots of the restyled app', async ({ page, request }) => {
   await page.screenshot({ path: 'screenshots/02-create.png', fullPage: true });
 
   // Voting page (mobile)
-  await page.addInitScript(() => window.localStorage.setItem('qv_walkthrough_seen', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('qv_voting_hint_seen', '1'));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/poll/${id}`);
   await page.waitForLoadState('networkidle');
   await page.screenshot({ path: 'screenshots/03-vote-mobile.png', fullPage: true });
 
-  // Cast a few votes, screenshot mid-flow
-  await page.getByRole('button', { name: /add a vote to Macron/i }).click();
-  await page.getByRole('button', { name: /add a vote to Macron/i }).click();
-  await page.getByRole('button', { name: /add a vote to Macron/i }).click();
-  await page.getByRole('button', { name: /add a vote to Le Pen/i }).click();
+  // Cast a realistic ballot (above the 30% low-usage warning threshold)
+  // so the regular submit-vote dialog flow is exercised.
+  for (let i = 0; i < 6; i++) {
+    await page.getByRole('button', { name: /add a vote to Macron/i }).click();
+  }
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole('button', { name: /add a vote to Le Pen/i }).click();
+  }
   await page.screenshot({ path: 'screenshots/04-vote-mobile-with-votes.png', fullPage: true });
 
   // Submit
