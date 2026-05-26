@@ -216,7 +216,7 @@ function TokenizedVoterList({
         </div>
       </div>
 
-      <ul className="mt-3 max-h-72 space-y-1.5 overflow-y-auto pr-1">
+      <ul className="mt-3 space-y-1.5">
         {tokens.map((t, idx) => {
           const url = urlFor(t);
           const voted = !!t.consumedAt;
