@@ -64,23 +64,23 @@ export function VotingClient({
   const stranded = remaining > 0 && !canAffordAnyMoreVote(allocationsList, creditsPerVoter);
   const hasAnyVote = allocationsList.some((a) => a.numVotes !== 0);
 
-  // Persist the dismissal once the banner has done its job — whether the
-  // voter clicked X explicitly or just started voting. No need to setState
-  // here (we already infer dismissed-ness from `hintExplicitlyDismissed ||
-  // hasAnyVote`); we just write through to storage.
+  // Persist the dismissal when the voter clicks X. We do NOT auto-dismiss
+  // on first vote anymore — surprise layout shifts at the moment of first
+  // interaction feel like a bug. The banner stays for the whole session
+  // unless the voter dismisses it, and the flag is also set on successful
+  // submit (in `submit()` below) so returning voters don't see it twice.
   useEffect(() => {
     if (!isClient) return;
-    if (hintExplicitlyDismissed || hasAnyVote) {
+    if (hintExplicitlyDismissed) {
       try {
         window.localStorage.setItem(HINT_KEY, '1');
       } catch {
         /* noop */
       }
     }
-  }, [isClient, hintExplicitlyDismissed, hasAnyVote]);
+  }, [isClient, hintExplicitlyDismissed]);
 
-  const showHint =
-    isClient && !hintSeenBefore && !hintExplicitlyDismissed && !hasAnyVote;
+  const showHint = isClient && !hintSeenBefore && !hintExplicitlyDismissed;
 
   function change(optionId: string, direction: 1 | -1) {
     setAllocations((prev) => {
@@ -115,6 +115,14 @@ export function VotingClient({
         return;
       }
       toast.success('Vote recorded');
+      // After a successful submission, mark the hint as seen so the
+      // voter doesn't see it again on future polls — they've demonstrated
+      // they get it.
+      try {
+        window.localStorage.setItem(HINT_KEY, '1');
+      } catch {
+        /* noop */
+      }
       router.push(`/poll/${pollId}/results`);
     } catch {
       toast.error('Network error. Check your connection and retry.');
