@@ -17,6 +17,26 @@ import { eq } from 'drizzle-orm';
 import { db, schema } from './index';
 import { creditCost } from '../lib/quadratic';
 
+// Fail loudly if the caller didn't set DATABASE_URL explicitly. This script
+// is meant to write to prod (Neon), and silently falling back to a local
+// Docker container is exactly the wrong default — we'd seed nothing useful
+// and the user would think the script worked. Force the prefix:
+//   DATABASE_URL='...neon-pooled-url...' npm run db:seed:public
+if (!process.env.DATABASE_URL) {
+  console.error(
+    'ERROR: DATABASE_URL is not set.\n' +
+      'This script writes curated public polls to production.\n' +
+      'Run as: DATABASE_URL=\'...neon-pooled-url...\' npm run db:seed:public',
+  );
+  process.exit(1);
+}
+
+// Print where we’re about to write so misroutes (local vs Neon) are obvious.
+{
+  const url = new URL(process.env.DATABASE_URL);
+  console.log(`Target: ${url.hostname} / db=${url.pathname.slice(1)}\n`);
+}
+
 interface SeedPoll {
   title: string;
   description?: string;
