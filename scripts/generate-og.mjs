@@ -51,8 +51,11 @@ const html = `<!doctype html><html><head><meta charset="utf-8"/>
   </div>
 </body></html>`;
 
+// 1200×630 @1x is the OG standard — keeps the file small (~100-200KB) so
+// WhatsApp / iMessage don't reject it for size and fall back to a generic
+// icon. deviceScaleFactor:2 produced a 1.2MB file that WhatsApp dropped.
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
 await page.setContent(html, { waitUntil: 'networkidle' });
 await page.locator('.card').screenshot({ path: out });
 await browser.close();
