@@ -9,7 +9,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
         <Wordmark />
         <nav className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+          <Button asChild variant="ghost" size="sm">
             <Link href="/explore">Explore</Link>
           </Button>
           <MyPollsHeaderLink />
@@ -17,7 +17,10 @@ export function SiteHeader() {
             <Link href="/#how-it-works">How it works</Link>
           </Button>
           <Button asChild size="sm" className="bg-grad-brand text-primary-foreground shadow-soft hover:opacity-95">
-            <Link href="/create">Create a poll</Link>
+            <Link href="/create">
+              <span className="sm:hidden">Create</span>
+              <span className="hidden sm:inline">Create a poll</span>
+            </Link>
           </Button>
         </nav>
       </div>

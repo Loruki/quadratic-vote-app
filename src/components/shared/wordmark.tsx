@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export function Wordmark({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
-  const dim = size === 'lg' ? 'text-xl' : 'text-base';
+  const label = size === 'lg' ? 'text-xl' : 'text-base';
   return (
     <Link
       href="/"
@@ -9,14 +9,19 @@ export function Wordmark({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
       aria-label="Quadratic Vote — home"
     >
       <span
-        className={`grid h-7 w-7 place-items-center rounded-lg bg-grad-brand text-primary-foreground shadow-soft transition-transform group-hover:rotate-6`}
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grad-brand text-primary-foreground shadow-soft transition-transform group-hover:rotate-6"
         aria-hidden
       >
-        <span className={`relative font-mono text-[13px] font-bold leading-none`}>
-          Q<sup className="absolute -top-1 -right-1.5 text-[9px]">2</sup>
+        {/* Natural <sup> keeps the ² in the text flow — the old absolute
+            positioning clipped it against the rounded square and read as
+            broken. */}
+        <span className="font-mono text-[15px] font-bold leading-none">
+          Q<sup className="text-[0.6em] font-semibold">2</sup>
         </span>
       </span>
-      <span className={dim}>Quadratic Vote</span>
+      {/* Hide the wordmark text on the narrowest screens so the mobile nav
+          (Explore + Create) has room without overflowing. */}
+      <span className={`hidden min-[380px]:inline ${label}`}>Quadratic Vote</span>
     </Link>
   );
 }

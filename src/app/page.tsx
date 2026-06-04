@@ -133,17 +133,6 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-border/50">
-        <div className="mx-auto flex max-w-5xl flex-col gap-2 px-6 py-10 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            Open source · Anonymous · Phone-first · Built for{' '}
-            <span className="text-grad-brand font-medium">honest preferences</span>.
-          </p>
-          <p className="text-xs">
-            © {new Date().getFullYear()} Quadratic Vote
-          </p>
-        </div>
-      </footer>
     </main>
   );
 }
