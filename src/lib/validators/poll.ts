@@ -95,3 +95,10 @@ export const updatePollSchema = z.object({
 });
 
 export type UpdatePollInput = z.infer<typeof updatePollSchema>;
+
+// Admin action: clear one tokenized voter's ballot so they can vote again.
+export const resetVoterSchema = z.object({
+  voterToken: z.string().trim().min(1).max(64),
+});
+
+export type ResetVoterInput = z.infer<typeof resetVoterSchema>;

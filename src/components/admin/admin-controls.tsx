@@ -8,6 +8,7 @@ import {
   Copy,
   Download,
   Lock,
+  RotateCcw,
   Unlock,
   Users,
 } from 'lucide-react';
@@ -95,7 +96,7 @@ export function AdminControls({
       {voterMode === 'open' ? (
         <OpenVoterLink pollId={pollId} origin={origin} />
       ) : (
-        <TokenizedVoterList pollId={pollId} origin={origin} tokens={tokens} />
+        <TokenizedVoterList pollId={pollId} token={token} origin={origin} tokens={tokens} />
       )}
     </section>
   );
@@ -138,13 +139,43 @@ function OpenVoterLink({ pollId, origin }: { pollId: string; origin: string }) {
 
 function TokenizedVoterList({
   pollId,
+  token,
   origin,
   tokens,
 }: {
   pollId: string;
+  token: string;
   origin: string;
   tokens: TokenEntry[];
 }) {
+  const router = useRouter();
+  const [resetting, setResetting] = useState<string | null>(null);
+
+  async function resetVoter(t: TokenEntry, label: string) {
+    if (!window.confirm(`Reset ${label}'s vote? Their ballot is deleted and their link works again.`)) {
+      return;
+    }
+    setResetting(t.token);
+    try {
+      const res = await fetch(`/api/polls/${pollId}/reset-voter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ voterToken: t.token }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: 'Failed' }));
+        toast.error(body.error ?? 'Failed to reset voter');
+        return;
+      }
+      toast.success(`${label}'s vote was reset`);
+      router.refresh();
+    } catch {
+      toast.error('Network error. Try again.');
+    } finally {
+      setResetting(null);
+    }
+  }
+
   const stats = useMemo(() => {
     const total = tokens.length;
     const voted = tokens.filter((t) => t.consumedAt).length;
@@ -244,25 +275,37 @@ function TokenizedVoterList({
               <code className="flex-1 truncate font-mono text-[11px] text-muted-foreground">
                 {url}
               </code>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 shrink-0 px-2"
-                onClick={() => copyOne(t)}
-                disabled={voted}
-                aria-label={
-                  voted
-                    ? 'This link has already been used'
-                    : `Copy link for ${t.label ?? `Voter ${idx + 1}`}`
-                }
-              >
-                {isThisRowCopied ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-              </Button>
+              {voted ? (
+                // Voted rows get a Reset (clears the ballot, frees the link)
+                // instead of a dead Copy button.
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 shrink-0 gap-1 px-2 text-muted-foreground hover:text-destructive"
+                  onClick={() => resetVoter(t, t.label ?? `Voter ${idx + 1}`)}
+                  disabled={resetting === t.token}
+                  aria-label={`Reset vote for ${t.label ?? `Voter ${idx + 1}`}`}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span className="text-[11px]">Reset</span>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 shrink-0 px-2"
+                  onClick={() => copyOne(t)}
+                  aria-label={`Copy link for ${t.label ?? `Voter ${idx + 1}`}`}
+                >
+                  {isThisRowCopied ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              )}
             </li>
           );
         })}
