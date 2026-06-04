@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 
 export async function getPollWithOptions(pollId: string) {
@@ -67,11 +67,15 @@ export async function getResults(pollId: string) {
 }
 
 /**
- * Public polls for the /explore page, with cheap aggregated voter counts.
+ * Public polls for the /explore page, with aggregated option + voter counts.
  * Returns at most `limit` polls, ordered newest first.
+ *
+ * Counts are computed with two GROUP BY queries rather than correlated
+ * subqueries: Drizzle's raw-sql `${table}` interpolation didn't correlate the
+ * subquery to the outer row and silently returned 0 for every poll.
  */
 export async function getPublicPolls(limit = 24) {
-  const rows = await db
+  const polls = await db
     .select({
       id: schema.polls.id,
       title: schema.polls.title,
@@ -79,17 +83,35 @@ export async function getPublicPolls(limit = 24) {
       creditsPerVoter: schema.polls.creditsPerVoter,
       isClosed: schema.polls.isClosed,
       createdAt: schema.polls.createdAt,
-      voterCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${schema.ballots} WHERE ${schema.ballots.pollId} = ${schema.polls.id}), 0)`.as(
-        'voter_count',
-      ),
-      optionCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${schema.options} WHERE ${schema.options.pollId} = ${schema.polls.id}), 0)`.as(
-        'option_count',
-      ),
     })
     .from(schema.polls)
     .where(and(eq(schema.polls.visibility, 'public'), eq(schema.polls.voterMode, 'open')))
     .orderBy(desc(schema.polls.createdAt))
     .limit(limit);
 
-  return rows;
+  if (polls.length === 0) return [];
+
+  const ids = polls.map((p) => p.id);
+
+  const [optionRows, ballotRows] = await Promise.all([
+    db
+      .select({ pollId: schema.options.pollId, n: count() })
+      .from(schema.options)
+      .where(inArray(schema.options.pollId, ids))
+      .groupBy(schema.options.pollId),
+    db
+      .select({ pollId: schema.ballots.pollId, n: count() })
+      .from(schema.ballots)
+      .where(inArray(schema.ballots.pollId, ids))
+      .groupBy(schema.ballots.pollId),
+  ]);
+
+  const optionCounts = new Map(optionRows.map((r) => [r.pollId, r.n]));
+  const voterCounts = new Map(ballotRows.map((r) => [r.pollId, r.n]));
+
+  return polls.map((p) => ({
+    ...p,
+    optionCount: optionCounts.get(p.id) ?? 0,
+    voterCount: voterCounts.get(p.id) ?? 0,
+  }));
 }
