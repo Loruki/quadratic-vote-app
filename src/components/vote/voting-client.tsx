@@ -183,8 +183,12 @@ export function VotingClient({
         ))}
       </ul>
 
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border/60 bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:static sm:mt-8 sm:rounded-2xl sm:border sm:bg-card sm:px-5 sm:py-4 sm:shadow-soft">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 sm:max-w-none">
+      {/* Sticky on desktop too (was sm:static): a full-width band on mobile,
+          a floating centered bar on desktop — so the budget + submit stay in
+          view even on a long list of options. */}
+      <div className="fixed inset-x-0 bottom-0 z-10 sm:bottom-6 sm:px-4">
+        <div className="border-t border-border/60 bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:mx-auto sm:max-w-2xl sm:rounded-2xl sm:border sm:border-border sm:bg-card/85 sm:px-5 sm:py-4 sm:shadow-brand sm:supports-[backdrop-filter]:bg-card/75">
+          <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
           <div className="text-sm">
             <p className="font-medium tabular-nums">
               {spent} / {creditsPerVoter} credits
@@ -203,6 +207,7 @@ export function VotingClient({
           >
             Submit vote
           </Button>
+          </div>
         </div>
       </div>
 

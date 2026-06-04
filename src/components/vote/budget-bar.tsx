@@ -13,7 +13,7 @@ export function BudgetBar({ spent, budget }: Props) {
   const near = pct >= 80;
 
   return (
-    <div className="sticky top-14 z-20 -mx-4 border-b border-border/60 bg-background/85 px-4 pb-3 pt-3 backdrop-blur sm:static sm:mx-0 sm:rounded-2xl sm:border sm:border-border sm:bg-card sm:px-5 sm:pb-4 sm:pt-4 sm:shadow-soft">
+    <div className="sticky top-14 z-20 -mx-4 border-b border-border/60 bg-background/85 px-4 pb-3 pt-3 backdrop-blur sm:top-16 sm:mx-0 sm:rounded-2xl sm:border sm:border-border sm:bg-card/85 sm:px-5 sm:pb-4 sm:pt-4 sm:shadow-soft sm:backdrop-blur">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           Budget
