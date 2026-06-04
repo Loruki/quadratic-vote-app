@@ -48,11 +48,11 @@ test('full flow: landing → create → vote → results', async ({ page }) => {
   await expect(page.getByText(/1 voter/i)).toBeVisible();
 });
 
-test('one-click submitters get warned about unspent credits', async ({ page, request }) => {
+test('one-click submitters are blocked below 30% of budget', async ({ page, request }) => {
   // Create an open poll directly via API to skip the create-form ceremony.
   const created = await request.post('/api/polls', {
     data: {
-      title: 'Low-usage warning test',
+      title: 'Low-usage block test',
       options: ['A', 'B', 'C'],
       creditsPerVoter: 100,
     },
@@ -61,7 +61,7 @@ test('one-click submitters get warned about unspent credits', async ({ page, req
   const { id } = await created.json();
 
   // Pre-seed the hint flag so the banner doesn't get in the way — we
-  // explicitly want to test the SUBMIT-side safety net.
+  // explicitly want to test the SUBMIT-side gate.
   await page.addInitScript(() => window.localStorage.setItem('qv_voting_hint_seen', '1'));
 
   await page.goto(`/poll/${id}`);
@@ -69,14 +69,15 @@ test('one-click submitters get warned about unspent credits', async ({ page, req
   await page.getByRole('button', { name: /add a vote to A/i }).click();
   await page.getByRole('button', { name: 'Submit vote' }).click();
 
-  // The dialog should surface the warning copy and a "Keep voting" primary.
-  await expect(page.getByText(/still have 99 credits unspent/i)).toBeVisible();
+  // The dialog hard-blocks: it shows the "use more of your budget" copy and
+  // the ONLY action is "Keep voting" — no escape hatch to submit.
+  await expect(page.getByText(/use more of your budget/i)).toBeVisible();
   await expect(
     page.getByRole('dialog').getByRole('button', { name: /keep voting/i }),
   ).toBeVisible();
   await expect(
     page.getByRole('dialog').getByRole('button', { name: /submit anyway/i }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 });
 
 test('budget exceeded API rejects oversized allocations', async ({ request }) => {
