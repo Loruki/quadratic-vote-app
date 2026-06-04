@@ -18,13 +18,13 @@ export const metadata: Metadata = {
     title: 'Quadratic Vote',
     description: 'Vote with how much you care. No signup. No wallet.',
     type: 'website',
-    images: ['/api/og/site'],
+    images: ['/og.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Quadratic Vote',
     description: 'Vote with how much you care. No signup. No wallet.',
-    images: ['/api/og/site'],
+    images: ['/og.png'],
   },
 };
 

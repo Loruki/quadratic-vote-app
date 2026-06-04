@@ -23,13 +23,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title: data.poll.title,
       description: data.poll.description ?? 'Vote with how much you care.',
-      images: [`/api/og/poll/${id}`],
+      images: ['/og.png'],
     },
     twitter: {
       card: 'summary_large_image',
       title: data.poll.title,
       description: data.poll.description ?? 'Vote with how much you care.',
-      images: [`/api/og/poll/${id}`],
+      images: ['/og.png'],
     },
   };
 }
