@@ -1,168 +1,228 @@
 # Decision log
 
-The non-obvious calls made building Quadratic Vote, and the trade-offs I accepted
-on purpose. Lightweight ADRs — each is _context → decision → trade-off_, plus what
-changed my mind when real use rewrote an assumption.
+Every non-obvious call made building Quadratic Vote — from kickoff to the first
+dogfooding pass — with the trade-off I accepted on purpose, and what changed my mind
+when real use rewrote an assumption.
 
-This is the fuller record behind the "Product decisions & trade-offs" table in the
-[README](../../README.md). Covers the initial build and the first dogfooding pass
-(late May – early June 2026).
+Lightweight ADRs: _context → decision → trade-off_. This is the fuller record behind
+the "Product decisions & trade-offs" table in the [README](../../README.md). It only
+logs actual forks-in-the-road, not implementation detail. Covers late May – early
+June 2026.
 
 ---
 
-## Product
+## Scope & kickoff
 
-### 1. No accounts — anonymous cookie + secret admin link
+### 1. Start fresh in a sibling repo, keep the PRD and research
 
-**Context.** Signup is the single biggest drop-off for a "share a link, vote now" tool.
-The whole positioning is _the link IS the product_.
+A scaffold already existed. I started a clean `quadratic-vote-app/` instead of building
+on it, but imported the existing PRD, competitive analysis, and research into `docs/pm/`.
+**Trade-off:** re-did some setup; gained a clean, narratable history and a free choice of
+stack — while keeping the product thinking that preceded the code.
 
-**Decision.** No auth. Voters are an anonymous `HttpOnly` cookie (CUID2). Poll creators
-get a secret admin URL token instead of a login.
+### 2. Investigated the referenced "ECC" repo, then skipped it
 
-**Trade-off (accepted).** On open polls a determined voter can clear cookies / use
-incognito and vote again — Sybil-bypassable. Fine for team/classroom polls; documented,
-not hidden. The mitigation for the higher-stakes case is decision #2.
+A repo was suggested as a possible dependency. I read it, found it was an agent-harness
+optimization system (not relevant to QV), and **chose not to adopt it** rather than bolt
+on something that didn't fit. Useful for _how_ I worked, not as a dependency.
 
-### 2. Two voter models — open vs tokenized
+### 3. Ship the full MVP loop, not a thin slice
 
-**Context.** "Anyone with the link" is great for casual polls but useless when
-one-vote-per-person actually matters (board votes, hiring panels).
+Create → vote → results → admin, end-to-end, over a thinner "core loop only" cut. The
+loop only teaches QV if it's complete, so a half-loop wasn't worth shipping.
 
-**Decision.** Two modes. _Open_ = cookie identity, share one link. _Tokenized_ =
-pre-issue one unguessable URL per named voter; the token IS the identity and burns on
-submit (in the same transaction as the ballot).
+---
 
-**Trade-off.** More schema (`voter_tokens`) and more create/admin UI. Worth it — it's the
-feature no free QV tool offers, and it's the honest answer to #1's Sybil limit.
+## Product & UX
 
-### 3. Cut negative votes from the MVP
+### 4. No accounts — anonymous cookie + secret admin link
 
-**Context.** QV's math supports "vote against" (negative votes cost the same N²). The PRD
-listed it. But in testing, first-timers found it confusing more than useful — the teaching
-moment lives entirely on the positive cost curve (tap +, watch the budget drain).
+Signup is the single biggest drop-off for a "share a link, vote now" tool; the whole
+positioning is _the link IS the product_. Voters are an `HttpOnly` CUID2 cookie; creators
+get a secret admin URL instead of a login. **Trade-off:** on open polls a determined voter
+can clear cookies and re-vote (Sybil-bypassable) — documented, not hidden. The answer for
+higher stakes is #5.
 
-**Decision.** Remove negative votes from the UI. Keep the squaring primitive in
-`quadratic.ts` so a future poll-creator toggle can re-enable opposition with no rewrite.
+### 5. Two voter models — open vs tokenized
 
-**Trade-off.** Lost the opposition signal. Reversible by design.
+_Open_ = cookie identity, one shared link. _Tokenized_ = one unguessable URL per named
+voter; the token IS the identity and burns on submit. **Trade-off:** more schema + UI —
+worth it; it's the feature no free QV tool offers and the honest fix for #4's Sybil limit.
 
-### 4. Hard-block submission below 30% of budget
+### 6. Two visibility modes — public vs unlisted
 
-**Context.** Started as a soft nudge ("you have credits left — keep going, Submit anyway").
-Then a colleague, in real use, tapped + once and submitted a 1-credit ballot anyway. The
-mechanic failed _silently_ — it looked like a normal pick-one poll.
+_Unlisted_ (link-only) is the default; _public_ lists the poll on `/explore`. Tokenized
+polls force unlisted (mixing public discovery with per-person links makes no sense).
+**Trade-off:** an extra concept on the create form, gated so it doesn't crowd the default.
 
-**Decision.** Make it a **hard gate**: a non-blank ballot under 30% of budget can't be
-submitted; the only action is "Keep voting". Blank ballots (abstention) stay exempt —
-submitting zero votes is a legitimate choice.
+### 7. Cut negative votes from the MVP
 
-**What changed my mind.** Dogfooding. The nudge wasn't enough; the escape hatch _was_ the
-bug. (Open question logged: a hard 30% floor also blocks someone who legitimately wants to
-vote small and concentrated — accepted for now, threshold is one constant to tune.)
+QV's math supports "vote against," and the PRD listed it — but first-timers found it
+confusing more than useful. The teaching moment lives entirely on the _positive_ cost
+curve. Removed from the UI; kept the squaring primitive in `quadratic.ts` so a future
+toggle can re-enable opposition with no rewrite. **Trade-off:** lost the opposition signal,
+reversibly.
 
-### 5. Inline hint banner instead of a modal walkthrough
+### 8. Visual direction — playful/energetic, not editorial or minimal
 
-**Context.** First version taught QV with a 3-step modal on first visit.
+Offered three brand directions; chose **playful/energetic** (violet→pink→coral gradient,
+soft shadows, spring motion) over editorial-serif or minimal-mono. It's the most shareable
+register for a tool whose growth loop is "a link in a group chat." **Trade-off:** less
+"serious institutional," but this isn't an institutional tool.
 
-**Decision.** Replace it with an inline banner above the options that stays until the voter
-votes or dismisses it.
+### 9. Live results by polling, not websockets
 
-**What changed my mind.** Watching people reflex-dismiss the modal without reading a word,
-then misuse the mechanic. A modal you have to clear is a modal people clear. Inline can't be
-swatted away in one tap.
+Results auto-refresh via SWR every 3s while a poll is open. The PRD listed real-time
+websockets as a non-goal; polling is far simpler and indistinguishable for async voting.
+**Trade-off:** a few seconds of lag and some idle requests — both irrelevant here.
 
-### 6. Deliberate ~1.5s creation overlay
+### 10. Seed `/explore` so it's never empty on day one
 
-**Context.** Poll creation is fast — _too_ fast. Users clicked "Create", the page changed
-instantly, and they weren't sure anything happened or whether they'd double-submitted.
+Public discovery dies if the first visitor sees a blank page. Seeded curated polls with
+realistic, quadratic-cost-aware vote distributions. **Trade-off:** a separate
+`seed-public.ts`, hardened to require an explicit `DATABASE_URL` after it once wrote to the
+wrong database.
 
-**Decision.** A confirmation dialog (it's irreversible) → an animated progress overlay with a
-~1.5s minimum → navigate to the admin page. Added latency on purpose.
+### 11. Hard-block submission below 30% of budget
 
-**Trade-off.** Slower than it needs to be. For an irreversible action, reassurance beats raw
+Started as a soft nudge ("Submit anyway"). A colleague still one-click-submitted a 1-credit
+ballot — the mechanic failed _silently_. Made it a **hard gate**: a non-blank ballot under
+30% can't submit; only "Keep voting". Abstention (blank) stays exempt. **→ Changed by:**
+dogfooding. The escape hatch _was_ the bug.
+
+### 12. Inline hint banner instead of a modal walkthrough
+
+First version taught QV with a 3-step first-visit modal. **→ Changed by:** watching people
+reflex-dismiss it without reading, then misuse the mechanic. A modal you must clear is a
+modal people clear. The inline banner can't be swatted in one tap, and stays until they
+vote.
+
+### 13. Navigate to the admin page after creation, not a dismissable modal
+
+Creation used to pop a share dialog over the form. Two problems: you could dismiss it and
+lose the admin link, or re-submit the form. Now creation routes to the admin page itself
+(its URL _is_ the admin link), with a one-time celebratory banner. **→ Changed by:** a user
+reporting the modal was too easy to dismiss / re-trigger.
+
+### 14. Deliberate ~1.5s creation overlay
+
+Creation was _too_ fast — users couldn't tell anything happened or feared a double-submit.
+Added a confirmation dialog (it's irreversible) → an animated progress overlay with a ~1.5s
+minimum. **Trade-off:** slower on purpose. For an irreversible action, reassurance beats raw
 speed. (Banks do this for the same reason.)
 
-### 7. Admin-link safety net — localStorage + /my + backup file
+### 15. Admin-link safety net — localStorage + `/my` + backup file
 
-**Context.** No accounts means the secret admin link is the _only_ way back into a poll.
-Lose it and you've lost control.
+No accounts means the secret admin link is the _only_ way back in. Three recovery layers:
+the URL is bookmarkable; every created poll mirrors to `localStorage` and lists on `/my`; a
+one-click `.txt` backup covers device switches. **Trade-off:** localStorage is per-browser
+(hence the file); a lost token can't be reset without an account model — intentional.
 
-**Decision.** Three recovery layers: the admin URL is the address bar (bookmarkable); every
-created poll is mirrored to `localStorage` and listed on `/my`; and a one-click `.txt`
-backup for switching devices. A post-creation banner pushes all three.
+### 16. Sticky budget + submit bars — mobile pattern, brought to desktop
 
-**Trade-off.** localStorage is per-browser — clearing data still loses it. That's why the
-backup file exists. Can't reset a lost token without an account model (intentional).
+Mobile pinned the budget bar to the top and the submit bar to the bottom (translucent,
+blurred); desktop dropped them to static and ended up _worse_. Made both sticky on desktop
+too. **→ Changed by:** a user noticing mobile was the better experience.
 
-### 8. Sticky budget + submit bars — mobile pattern, brought to desktop
+### 17. Admin can reset a tokenized voter's ballot
 
-**Context.** Mobile pinned the budget bar to the top and the submit bar to the bottom
-(translucent, blurred), so on a long option list you always saw both. Desktop dropped them to
-static — and ended up _worse_ than mobile.
-
-**Decision.** Keep both bars sticky on desktop too (budget under the header, submit as a
-floating centered bar). Surfaced by a user noticing mobile was the better experience.
+Voted rows in the admin voter list get a "Reset" that deletes the ballot (votes cascade)
+and frees the token so the person can re-vote. **Scope decision:** tokenized polls only —
+open polls have no per-person identity to reset, so the endpoint returns 400 there.
 
 ---
 
 ## Engineering
 
-### 9. Race-safe voting — one transaction, one atomic gate
+### 18. Race-safe voting — one transaction, one atomic gate
 
-**Decision.** Every vote invariant (poll open, budget, valid options, single ballot per
-voter, token unconsumed) runs inside one Drizzle transaction. The `UNIQUE(poll_id, voter_id)`
-index on `ballots` is the atomic single-vote gate — it covers abstention too, and turns a
-double-submit race into a clean 409 instead of two ballots.
+Every invariant (poll open, budget, valid options, single ballot per voter, token
+unconsumed) runs in one Drizzle transaction. The `UNIQUE(poll_id, voter_id)` index on
+`ballots` is the atomic single-vote gate — it covers abstention and turns a double-submit
+race into a clean 409 instead of two ballots.
 
-### 10. Admin token in `Authorization: Bearer`, never the URL
+### 19. Admin token in `Authorization: Bearer`, never the URL
 
-**Decision.** Admin actions read the token from the `Authorization` header, compared with
-`crypto.timingSafeEqual`. The token never rides in a query string.
+URL tokens leak into server logs, browser history, and `Referer` headers. The admin token
+rides in the header, compared with `crypto.timingSafeEqual`, and is stripped from the public
+poll API response.
 
-**Why.** URL tokens leak into server logs, browser history, and `Referer` headers. The header
-keeps the only key out of all three. The public poll API also strips `adminToken` from its
-response.
+### 20. Hydration-safe client reads — `useIsClient` + server-resolved origin
 
-### 11. Static OG card instead of dynamic `next/og`
+Two production hydration mismatches: building absolute URLs from `window.location` client-side,
+and reading `localStorage` during render. Fixed by resolving the origin from request headers
+server-side, and gating browser-only reads behind a `useSyncExternalStore`-based `useIsClient`.
+**Lesson:** server and first client render must emit byte-identical HTML.
 
-**Context.** Per-poll OG images via `next/og` on the Edge runtime timed out in production
-(0 bytes / HTTP 000 — Satori couldn't resolve a font and the default-font fetch hung).
+### 21. Static OG card instead of dynamic `next/og`
 
-**Decision.** Render the brand card once (headless Chromium → `public/og.png`, 1200×630,
-~360 KB so WhatsApp doesn't reject it) and point all metadata at the static file. Deleted the
-dynamic routes; recoverable from git if the Edge issue is ever worth fighting.
+Per-poll OG images via `next/og` on the Edge runtime timed out in production (0 bytes — Satori
+couldn't resolve a font). Render the brand card once (headless Chromium → `public/og.png`) and
+point all metadata at the static file. **Then:** shrank it to 1200×630 / ~360 KB after WhatsApp
+rejected the 1.2 MB retina version and showed a fallback icon. **Trade-off:** generic card, not
+per-poll. Reliable preview > clever broken one. Diagnosed live against prod.
 
-**Trade-off.** Poll-specific cards became one generic brand card. A reliable share preview
-beats a clever broken one. Diagnosed live against prod, not guessed.
+### 22. `getPublicPolls` — `count()` + `groupBy`, not a correlated subquery
 
-### 12. `getPublicPolls` — `count()` + `groupBy`, not a correlated subquery
+`/explore` showed "0 voters · 0 options" on polls with real data. Drizzle's raw-sql `${table}`
+interpolation inside a correlated `SELECT` subquery didn't bind the outer row, so `COUNT(*)`
+ran against an uncorrelated scope → 0 (and as a string, which broke pluralization too). Replaced
+with two `count()` + `groupBy` queries joined in JS. **Lesson:** a suspiciously uniform value
+from a raw subquery means a correlation bug before a data bug.
 
-**Context.** `/explore` cards showed "0 voters · 0 options" on polls with real data. Root
-cause: Drizzle's raw-sql `${table}` interpolation inside a correlated `SELECT` subquery didn't
-bind the outer row, so `COUNT(*)` always evaluated against an uncorrelated scope → 0 (and as a
-string, which also broke pluralization).
+### 23. DRY refactor by audit-then-execute
 
-**Decision.** Replace with two `count()` + `groupBy` queries joined in JS. Counts are real
-numbers. Lesson: when a raw-sql subquery returns a suspiciously uniform value, suspect the
-correlation before the data.
+After the build, ran a cataloged refactor pass: extracted `useCopyToClipboard` (was inlined 8×),
+`lib/backup.ts` (3×), an `<Eyebrow>` component (9×), a `parseJson` API helper (3×), and deleted a
+331-line dead share dialog. **Process decision:** catalog → ranked plan → one item at a time with
+gates between — not an ad-hoc cleanup. −207 LOC, zero behaviour change.
 
 ---
 
-## Process & scope
+## Infrastructure & deployment
 
-### 13. Defer the public API and harden it first
+### 24. Neon Postgres (PG 17, no Neon Auth)
 
-**Context.** The write API is open — no accounts, no rate limiting. Documenting it as an
-"agent-ready API" would advertise an unprotected `POST /api/polls` (mass-create → fills the
-free-tier DB).
+Chose Neon over Supabase for the managed Postgres — instant provisioning, generous free tier,
+clean Drizzle fit. Declined Neon Auth: there are no accounts to authenticate, and adding one
+would contradict #4.
 
-**Decision.** Hold the API docs page until rate limiting lands. Tracked in
-[issue #1](https://github.com/Loruki/quadratic-vote-app/issues/1). Surfaced by a user asking
-"with which API keys, and isn't there a spam risk?" — the right question before exposing it.
+### 25. One DNS zone — web on Vercel, email on OVH
 
-### 14. Ship, then let real use rewrite the assumptions
+The domain serves the app from Vercel (`A` + `CNAME`) while OVH keeps the email infra (MX, SPF,
+DKIM) for a future `contact@`. Web and email are independent record types, so both coexist.
+**Also:** deleted the IPv6 `AAAA` parking records — the sneaky ones that would have routed
+IPv6 visitors to the OVH parking instead of Vercel.
 
-**The meta-decision.** Most of the changes above (#3, #4, #5, #8) came not from planning but
-from shipping and watching ~12 colleagues actually vote. Thirty minutes of real use surfaced
-problems no test caught. The build was the cheap part; the dogfooding was the product work.
+### 26. Keep the brand "Quadratic Vote" despite the `quadratic-voting.com` domain
+
+The exact-match `quadraticvote.com` was taken; the domain has a hyphen and "voting" vs "vote".
+Decided **not** to rename (clunkier) and **not** to buy another domain yet — people click shared
+links, they don't type the domain. Revisit `quadratic.vote` (which literally spells the brand)
+only _after_ the product shows signal. A rich person's problem; solve it when it's earned.
+
+---
+
+## Strategy & process
+
+### 27. Defer the public API and harden it first
+
+The write API is open — no accounts, no rate limiting. Documenting it as "agent-ready" would
+advertise an unprotected `POST /api/polls` (mass-create → fills the free-tier DB). Held the API
+docs page until rate limiting lands; tracked in
+[issue #1](https://github.com/Loruki/quadratic-vote-app/issues/1). **→ Surfaced by:** a user
+asking "with which API keys, and isn't there a spam risk?" — the right question before exposing it.
+
+### 28. Treat it as a vitamin — don't force a launch
+
+Honest framing: this is a nice-to-have, not a painkiller, with ~0 users. So the go-to-market is a
+cheap _test of appetite_, not an investment. **Rejected:** paid ads (no business model → negative
+ROAS), a TikTok/blog treadmill (wrong founder fit), heavy SEO (low search volume). **Kept cheap:**
+dogfood real decisions (team, family); let public discovery and the open-source repo work
+passively. No pressure to grow something unvalidated.
+
+### 29. Ship, then let real use rewrite the assumptions
+
+The meta-decision. Most product changes above (#11, #12, #13, #16) came not from planning but from
+shipping and watching ~12 colleagues actually vote. Thirty minutes of real use surfaced problems no
+test caught. The build was the cheap part; the dogfooding was the product work.
