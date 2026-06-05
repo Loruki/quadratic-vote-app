@@ -155,3 +155,24 @@ Match the global `~/.claude/CLAUDE.md` working style. Specifically here:
 - **For UI changes, look at the page** — not just trust that JSX compiles.
 - **Schema changes need a migration** — `npm run db:generate --name=<descriptive>` + commit both the SQL and the snapshot.
 - **No `console.log` left behind.** No commented-out blocks. No `TODO` without an owner or date.
+
+### Keep the decision log current — non-negotiable
+
+When you make a **non-obvious decision** in this repo, append it to
+[`docs/decisions/README.md`](docs/decisions/README.md) before calling the work done. This
+is part of the deliverable, not optional cleanup — the log is a flagship PM portfolio
+artifact and it only stays valuable if it stays current.
+
+A decision belongs in the log when it's a real fork in the road:
+
+- A trade-off accepted on purpose (you chose X over Y and gave something up).
+- A reversal of a prior assumption — **especially one driven by real use / dogfooding**
+  (these are the highest-signal entries; note _what changed your mind_).
+- A scope or strategy call (what you deliberately did _not_ build, and why).
+
+It does **not** belong there for implementation detail (renames, refactors with no
+behaviour change, bug fixes with no judgment call). Signal over volume.
+
+Match the existing ADR-lite format: a bold title, then _context → decision → trade-off_,
+in the right section (Scope · Product & UX · Engineering · Infrastructure · Strategy).
+The `/log-decision` skill does this for you if it exists.
