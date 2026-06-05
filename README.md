@@ -72,6 +72,8 @@ accept on purpose. The calls I made and why:
 | **Deliberate 1.5s creation overlay** | The create call is fast — *too* fast. Users couldn't tell anything happened and worried they'd double-submitted. | Added latency on purpose. Reassurance > raw speed for an irreversible action. |
 | **Static OG card over dynamic per-poll images** | The dynamic `next/og` route timed out on Vercel's Edge runtime in production. | Per-poll cards (with the poll title baked in) became one generic brand card. Reliable share previews > broken clever ones. |
 
+📋 **Full reasoning, including the engineering and process calls, in the [decision log](docs/decisions).**
+
 ## What I deliberately did NOT build
 
 Scope discipline from the [PRD's non-goals](docs/pm/prd/mvp-prd.md): no real-time
