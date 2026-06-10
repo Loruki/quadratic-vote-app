@@ -71,6 +71,7 @@ accept on purpose. The calls I made and why:
 | **Admin = secret URL token** | No accounts means no login to manage a poll. A CUID2 token in the admin URL is the key. | If leaked, the poll can be closed by anyone. Mitigated with a "save this link" flow + local recovery, never logged (sent as `Authorization: Bearer`, compared in constant time). |
 | **Deliberate 1.5s creation overlay** | The create call is fast — *too* fast. Users couldn't tell anything happened and worried they'd double-submitted. | Added latency on purpose. Reassurance > raw speed for an irreversible action. |
 | **Static OG card over dynamic per-poll images** | The dynamic `next/og` route timed out on Vercel's Edge runtime in production. | Per-poll cards (with the poll title baked in) became one generic brand card. Reliable share previews > broken clever ones. |
+| **Votes drawn as literal squares (the gnomon grid)** | "Quadratic" means *square*: N votes render as an N×N grid, and the next vote's cost is visibly the L-shaped shell of 2N+1 cells around it. The form teaches the mechanic — no prose required. | More pixels per option card, and cells shrink past 5×5 votes. Shipped without baseline comprehension data (near-empty prod) — a bet on embodiment, to be validated by the next dogfood. |
 
 📋 **Full reasoning, including the engineering and process calls, in the [decision log](docs/decisions).**
 

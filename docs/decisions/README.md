@@ -130,6 +130,21 @@ Voted rows in the admin voter list get a "Reset" that deletes the ballot (votes 
 and frees the token so the person can re-vote. **Scope decision:** tokenized polls only —
 open polls have no per-person identity to reset, so the endpoint returns 400 there.
 
+### 30. Votes render as literal squares — the gnomon grid
+
+The vote page is the first-contact surface, yet it taught QV through muted caption numbers
+and a _linear_ budget bar that hides the curve. After running ~21 redesign ideas through
+the four perspective agents, each option card now renders N votes as an N×N block square,
+with the affordable next vote as a dashed L-shell of exactly 2N+1 ghost cells — the
+pricing rule made visible — and the price moved onto the + button itself.
+**Killed on review:** the idea I started from (background color shifting as the budget
+drains — color-only signal, urgency theater), flying budget blocks (meaning dies under
+reduced motion), sliders, sound/haptics, and a first-tap celebration that would have
+rewarded the exact one-tap behavior #11 hard-blocks. **Trade-off:** cells shrink past 5×5
+so cross-card area comparison breaks at high counts (the budget bar owns that job), and I
+shipped without a baseline ballot-shape measurement — prod is near-empty, so this is a bet
+on embodiment to be validated by the next dogfood, not a measured comprehension fix.
+
 ---
 
 ## Engineering
@@ -176,6 +191,16 @@ After the build, ran a cataloged refactor pass: extracted `useCopyToClipboard` (
 `lib/backup.ts` (3×), an `<Eyebrow>` component (9×), a `parseJson` API helper (3×), and deleted a
 331-line dead share dialog. **Process decision:** catalog → ranked plan → one item at a time with
 gates between — not an ad-hoc cleanup. −207 LOC, zero behaviour change.
+
+### 31. Honor `prefers-reduced-motion` globally before adding more motion
+
+The gnomon redesign multiplies decorative animation — and review found the app had _zero_
+reduced-motion support. Treated as a prerequisite, not polish: a global
+`MotionConfig reducedMotion="user"` now gates every framer-motion spring, and Playwright
+emulates `reducedMotion: reduce` so e2e assertions never race an animation. **Trade-off:**
+reduced-motion users get fades instead of spring choreography — acceptable because the
+gnomon's meaning lives in its end state, not its motion (the same constraint that killed
+the flying-blocks idea).
 
 ---
 
