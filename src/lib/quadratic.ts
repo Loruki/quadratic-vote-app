@@ -63,3 +63,27 @@ export function canAffordAnyMoreVote(allocations: Allocation[], budget: number):
   if (remaining <= 0) return false;
   return allocations.some((a) => 2 * a.numVotes + 1 <= remaining);
 }
+
+/**
+ * Apply a ±1 vote step to an allocation map, enforcing the budget.
+ * Returns the next map, or null when the step is invalid (over budget or
+ * below zero).
+ *
+ * Pure on purpose: this must run *inside* a React state updater and
+ * validate against the updater's `prev`. Validating against anything
+ * render-scoped lets two near-simultaneous taps on different options
+ * check the same stale snapshot and transiently overshoot the budget.
+ */
+export function applyVote(
+  allocations: Record<string, number>,
+  optionId: string,
+  direction: 1 | -1,
+  budget: number,
+): Record<string, number> | null {
+  const next = (allocations[optionId] ?? 0) + direction;
+  if (next < 0) return null;
+  const trial = { ...allocations, [optionId]: next };
+  const spent = Object.values(trial).reduce((sum, v) => sum + creditCost(v), 0);
+  if (spent > budget) return null;
+  return trial;
+}

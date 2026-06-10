@@ -80,6 +80,31 @@ test('one-click submitters are blocked below 30% of budget', async ({ page, requ
   ).toHaveCount(0);
 });
 
+test('rapid taps never desync votes from budget', async ({ page, request }) => {
+  const created = await request.post('/api/polls', {
+    data: { title: 'Rapid tap test', options: ['A', 'B'], creditsPerVoter: 100 },
+  });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+
+  await page.addInitScript(() => window.localStorage.setItem('qv_voting_hint_seen', '1'));
+  await page.goto(`/poll/${id}`);
+
+  // Hammer + 10 times as fast as Playwright can, then assert immediately —
+  // no waits. State must be exactly 10 votes / 100 credits regardless of
+  // in-flight animations (gnomon cells springing in, pill remounts).
+  const addA = page.getByRole('button', { name: /add a vote to A/i });
+  for (let i = 0; i < 10; i++) {
+    await addA.click();
+  }
+  await expect(page.getByText('10 votes', { exact: true })).toBeVisible();
+  await expect(page.getByText('100 / 100 credits').first()).toBeVisible();
+
+  // Budget is fully spent: both options' + buttons must be disabled.
+  await expect(addA).toBeDisabled();
+  await expect(page.getByRole('button', { name: /add a vote to B/i })).toBeDisabled();
+});
+
 test('budget exceeded API rejects oversized allocations', async ({ request }) => {
   const created = await request.post('/api/polls', {
     data: { title: 'budget test', options: ['A', 'B'], creditsPerVoter: 25 },

@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useIsClient } from '@/hooks/use-is-client';
-import { canAffordAnyMoreVote, creditCost, remainingCredits, totalCreditsSpent } from '@/lib/quadratic';
+import { applyVote, canAffordAnyMoreVote, creditCost, remainingCredits, totalCreditsSpent } from '@/lib/quadratic';
 import { BudgetBar } from './budget-bar';
 import { OptionCard } from './option-card';
 import { SubmitDialog } from './submit-dialog';
@@ -84,17 +84,15 @@ export function VotingClient({
 
   function change(optionId: string, direction: 1 | -1) {
     setAllocations((prev) => {
-      const cur = prev[optionId] ?? 0;
-      const next = cur + direction;
-      const trialList = allocationsList.map((a) =>
-        a.optionId === optionId ? { ...a, numVotes: next } : a,
-      );
-      const trialSpent = totalCreditsSpent(trialList);
-      if (trialSpent > creditsPerVoter) {
+      // Validate against `prev`, never against render-scoped state: two
+      // near-simultaneous taps on different options would otherwise both
+      // check the same stale snapshot and overshoot the budget.
+      const next = applyVote(prev, optionId, direction, creditsPerVoter);
+      if (!next) {
         toast.error('Not enough credits for that vote');
         return prev;
       }
-      return { ...prev, [optionId]: next };
+      return next;
     });
   }
 

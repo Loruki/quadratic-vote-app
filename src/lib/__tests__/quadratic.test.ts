@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyVote,
   canAffordAnyMoreVote,
   creditCost,
   maxVotesAffordable,
@@ -73,6 +74,32 @@ describe('quadratic math', () => {
       expect(refundForDecrement(3)).toBe(5);
       expect(refundForDecrement(1)).toBe(1);
       expect(refundForDecrement(0)).toBe(0);
+    });
+  });
+
+  describe('applyVote', () => {
+    it('increments and decrements within budget', () => {
+      expect(applyVote({ a: 0, b: 0 }, 'a', 1, 25)).toEqual({ a: 1, b: 0 });
+      expect(applyVote({ a: 3, b: 1 }, 'a', -1, 25)).toEqual({ a: 2, b: 1 });
+    });
+
+    it('rejects a step that would exceed the budget', () => {
+      // a: 3 votes = 9 credits; going to 4 costs 16 total → 17 > 10.
+      expect(applyVote({ a: 3, b: 1 }, 'a', 1, 10)).toBeNull();
+    });
+
+    it('rejects decrementing below zero', () => {
+      expect(applyVote({ a: 0 }, 'a', -1, 100)).toBeNull();
+    });
+
+    it('stays consistent when two taps on different options land in the same tick', () => {
+      // Simulates React applying queued functional updates in order: the
+      // second update must validate against the FIRST update's result, not
+      // the shared stale snapshot — budget 1 can afford one vote, not two.
+      const start = { a: 0, b: 0 };
+      const afterA = applyVote(start, 'a', 1, 1);
+      expect(afterA).toEqual({ a: 1, b: 0 });
+      expect(applyVote(afterA!, 'b', 1, 1)).toBeNull();
     });
   });
 
