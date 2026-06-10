@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
+import { MotionProvider } from '@/components/shared/motion-provider';
 import { SiteHeader } from '@/components/shared/site-header';
 import { SiteFooter } from '@/components/shared/site-footer';
 import './globals.css';
@@ -33,10 +34,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background">
-        <SiteHeader />
-        {children}
-        <SiteFooter />
-        <Toaster richColors position="top-center" />
+        <MotionProvider>
+          <SiteHeader />
+          {children}
+          <SiteFooter />
+          <Toaster richColors position="top-center" />
+        </MotionProvider>
       </body>
     </html>
   );

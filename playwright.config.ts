@@ -9,6 +9,9 @@ export default defineConfig({
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3211',
     trace: 'retain-on-failure',
+    // The app honors prefers-reduced-motion via MotionConfig — emulating it
+    // here makes assertions deterministic (no mid-flight animation states).
+    contextOptions: { reducedMotion: 'reduce' },
   },
   webServer: {
     command: 'npx next dev -p 3211',
