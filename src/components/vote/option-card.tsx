@@ -53,15 +53,16 @@ export function OptionCard({ label, votes, remainingCredits, onChange }: Props) 
         <div className="mt-3 flex items-end justify-between gap-3">
           <GnomonGrid votes={votes} showGhost={canIncrement} />
           <div className="min-w-0 flex-1 text-xs text-muted-foreground">
+            {/* No "− refunds N" line: dogfooding showed 2N−1 next to the
+                2N+1 ghost shell reads as a contradiction (9 dashed cells,
+                "refunds 7"?). Tapping − is free and reversible — it can
+                teach itself. The refund stays in the − accessible name. */}
             {votes > 0 && (
-              <>
-                <p className="tabular-nums">
-                  {votes} × {votes} ={' '}
-                  <span className="font-medium text-foreground">{currentCost}</span> credit
-                  {currentCost === 1 ? '' : 's'}
-                </p>
-                <p className="mt-0.5 tabular-nums">− refunds {refund}</p>
-              </>
+              <p className="tabular-nums">
+                {votes} × {votes} ={' '}
+                <span className="font-medium text-foreground">{currentCost}</span> credit
+                {currentCost === 1 ? '' : 's'}
+              </p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -69,7 +70,9 @@ export function OptionCard({ label, votes, remainingCredits, onChange }: Props) 
               type="button"
               onClick={() => onChange(-1)}
               disabled={!canDecrement}
-              aria-label={`Remove a vote from ${label}`}
+              aria-label={`Remove a vote from ${label}${
+                votes > 0 ? ` (refunds ${refund} credit${refund === 1 ? '' : 's'})` : ''
+              }`}
               className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card text-foreground shadow-soft transition-colors hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Minus className="h-4 w-4" />

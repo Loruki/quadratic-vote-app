@@ -144,6 +144,11 @@ rewarded the exact one-tap behavior #11 hard-blocks. **Trade-off:** cells shrink
 so cross-card area comparison breaks at high counts (the budget bar owns that job), and I
 shipped without a baseline ballot-shape measurement — prod is near-empty, so this is a bet
 on embodiment to be validated by the next dogfood, not a measured comprehension fix.
+**→ Refined by dogfooding (day one):** the "− refunds 7" caption sat directly under the
+9-cell ghost shell and read as a contradiction — the numbers describe opposite directions
+(next costs 2N+1, stepping back refunds 2N−1), and no first-timer should have to parse
+that asymmetry. Deleted the refund line: tapping − is free and reversible, so it teaches
+itself. The refund moved into the − button's accessible name.
 
 ---
 
