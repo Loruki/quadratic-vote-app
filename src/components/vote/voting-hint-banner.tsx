@@ -21,6 +21,12 @@ interface Props {
  *
  * The critical message — the one missing from the modal — is the explicit
  * "tap + as many times as you want" line.
+ *
+ * Slimmed once the gnomon grid + the F19 cost annotation shipped: the
+ * "2 votes = 4 credits, 3 = 9" arithmetic that used to live here is now
+ * drawn by the cards and taught at the moment of the tap, so the banner
+ * keeps only the two jobs the cards *don't* do — budget orientation and
+ * the "you may tap one option many times" nudge.
  */
 export function VotingHintBanner({ creditsPerVoter, optionsCount, onDismiss }: Props) {
   return (
@@ -59,8 +65,7 @@ export function VotingHintBanner({ creditsPerVoter, optionsCount, onDismiss }: P
             <span className="font-medium text-foreground">
               Tap + as many times as you want
             </span>{' '}
-            on any option — but votes get expensive fast (2 votes = 4 credits, 3 = 9,
-            4 = 16). Spread your budget where you care most.
+            on any option — spend more where you care most.
           </p>
         </div>
       </div>

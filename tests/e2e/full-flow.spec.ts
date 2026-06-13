@@ -105,6 +105,49 @@ test('rapid taps never desync votes from budget', async ({ page, request }) => {
   await expect(page.getByRole('button', { name: /add a vote to B/i })).toBeDisabled();
 });
 
+test('first-visit cost lesson teaches in two beats', async ({ page, request }) => {
+  const created = await request.post('/api/polls', {
+    data: { title: 'Annotation test', options: ['A', 'B'], creditsPerVoter: 100 },
+  });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+
+  // Seed the banner flag — we're testing the inline cost annotation, not
+  // the banner — but leave qv_cost_taught unset so the lesson fires.
+  await page.addInitScript(() => window.localStorage.setItem('qv_voting_hint_seen', '1'));
+  await page.goto(`/poll/${id}`);
+
+  const addA = page.getByRole('button', { name: /add a vote to A/i });
+
+  // Beat 1: the first vote of the ballot.
+  await addA.click();
+  await expect(page.getByText(/that first vote cost 1 credit/i)).toBeVisible();
+
+  // Beat 2: the same option's second vote — the quadratic bite.
+  await addA.click();
+  await expect(page.getByText(/votes get pricier as you stack them/i)).toBeVisible();
+});
+
+test('a voter who was already taught sees no cost lesson', async ({ page, request }) => {
+  const created = await request.post('/api/polls', {
+    data: { title: 'Taught test', options: ['A', 'B'], creditsPerVoter: 100 },
+  });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+
+  await page.addInitScript(() => {
+    window.localStorage.setItem('qv_voting_hint_seen', '1');
+    window.localStorage.setItem('qv_cost_taught', '1');
+  });
+  await page.goto(`/poll/${id}`);
+
+  const addA = page.getByRole('button', { name: /add a vote to A/i });
+  await addA.click();
+  await addA.click();
+  await expect(page.getByText(/that first vote cost 1 credit/i)).toHaveCount(0);
+  await expect(page.getByText(/votes get pricier as you stack them/i)).toHaveCount(0);
+});
+
 test('budget exceeded API rejects oversized allocations', async ({ request }) => {
   const created = await request.post('/api/polls', {
     data: { title: 'budget test', options: ['A', 'B'], creditsPerVoter: 25 },

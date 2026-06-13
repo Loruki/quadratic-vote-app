@@ -3,11 +3,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useIsClient } from '@/hooks/use-is-client';
 import { applyVote, canAffordAnyMoreVote, creditCost, remainingCredits, totalCreditsSpent } from '@/lib/quadratic';
+import { nextTeach, type TeachStep } from '@/lib/teaching';
 import { BudgetBar } from './budget-bar';
 import { OptionCard } from './option-card';
 import { SubmitDialog } from './submit-dialog';
@@ -27,6 +28,18 @@ type AllocationMap = Record<string, number>;
 // dismissed without being read, so we moved to an inline banner with its
 // own flag (separate so reverting wouldn't surprise returning users).
 const HINT_KEY = 'qv_voting_hint_seen';
+// Separate flag for the F19 just-in-time cost annotation. Kept distinct
+// from HINT_KEY so the two teaching layers can be reverted independently,
+// and so a voter who saw the old banner still gets the cost lesson once.
+const COST_TAUGHT_KEY = 'qv_cost_taught';
+
+// The two beats of the cost lesson, surfaced inline on the tapped card.
+const BEAT_TEXT: Record<1 | 2, string> = {
+  1: 'That first vote cost 1 credit. Try tapping the same option again.',
+  2: 'This one cost 3, not 1 — votes get pricier as you stack them. That’s quadratic voting.',
+};
+
+const ANNOTATION_MS = 6000;
 
 export function VotingClient({
   pollId,
@@ -53,6 +66,42 @@ export function VotingClient({
       return false;
     }
   });
+
+  // F19 cost annotation: which card shows which beat right now, and how far
+  // through the lesson this voter is. teachStep seeds from localStorage but
+  // is only ever *used* by tap handlers (post-hydration), so no SSR mismatch.
+  const [annotation, setAnnotation] = useState<{ optionId: string; beat: 1 | 2 } | null>(null);
+  const teachStep = useRef<TeachStep>(
+    (() => {
+      if (typeof window === 'undefined') return 0;
+      try {
+        return window.localStorage.getItem(COST_TAUGHT_KEY) === '1' ? 'done' : 0;
+      } catch {
+        return 0;
+      }
+    })(),
+  );
+  const annotationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showBeat(optionId: string, beat: 1 | 2) {
+    setAnnotation({ optionId, beat });
+    if (annotationTimer.current) clearTimeout(annotationTimer.current);
+    annotationTimer.current = setTimeout(() => setAnnotation(null), ANNOTATION_MS);
+  }
+
+  function markTaught() {
+    teachStep.current = 'done';
+    try {
+      window.localStorage.setItem(COST_TAUGHT_KEY, '1');
+    } catch {
+      /* noop */
+    }
+  }
+
+  // Clear the auto-fade timer on unmount.
+  useEffect(() => () => {
+    if (annotationTimer.current) clearTimeout(annotationTimer.current);
+  }, []);
 
   const allocationsList = useMemo(
     () => options.map((o) => ({ optionId: o.id, numVotes: allocations[o.id] ?? 0 })),
@@ -94,6 +143,30 @@ export function VotingClient({
       }
       return next;
     });
+
+    // First-visit cost lesson. Best-effort and gated on the vote actually
+    // being affordable (so we never teach off a rejected tap); the two
+    // teachable steps cost 1 and 3 credits, so they're always affordable
+    // when they fire. Render-scoped `allocations` is fine here — teaching
+    // is not correctness-critical the way the budget gate above is.
+    if (
+      direction === 1 &&
+      teachStep.current !== 'done' &&
+      applyVote(allocations, optionId, direction, creditsPerVoter)
+    ) {
+      const totalVotesBefore = Object.values(allocations).reduce((a, b) => a + b, 0);
+      const { step, beat } = nextTeach(
+        teachStep.current,
+        allocations[optionId] ?? 0,
+        totalVotesBefore,
+        direction,
+      );
+      teachStep.current = step;
+      if (beat) {
+        showBeat(optionId, beat);
+        if (step === 'done') markTaught();
+      }
+    }
   }
 
   async function submit() {
@@ -113,11 +186,12 @@ export function VotingClient({
         return;
       }
       toast.success('Vote recorded');
-      // After a successful submission, mark the hint as seen so the
-      // voter doesn't see it again on future polls — they've demonstrated
-      // they get it.
+      // After a successful submission, mark both teaching layers as seen —
+      // the voter has demonstrated they get it, so future polls skip the
+      // banner and the cost annotation even if they never hit beat 2.
       try {
         window.localStorage.setItem(HINT_KEY, '1');
+        window.localStorage.setItem(COST_TAUGHT_KEY, '1');
       } catch {
         /* noop */
       }
@@ -177,6 +251,7 @@ export function VotingClient({
             votes={allocations[o.id] ?? 0}
             remainingCredits={remaining}
             onChange={(dir) => change(o.id, dir)}
+            annotation={annotation?.optionId === o.id ? BEAT_TEXT[annotation.beat] : undefined}
           />
         ))}
       </ul>

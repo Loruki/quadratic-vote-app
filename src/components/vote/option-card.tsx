@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Minus, Plus } from 'lucide-react';
 import { creditCost, nextVoteCost, refundForDecrement } from '@/lib/quadratic';
 import { GnomonGrid } from './gnomon-grid';
@@ -10,9 +10,11 @@ interface Props {
   votes: number;
   remainingCredits: number;
   onChange: (direction: 1 | -1) => void;
+  /** First-visit cost lesson, shown transiently below this card. */
+  annotation?: string;
 }
 
-export function OptionCard({ label, votes, remainingCredits, onChange }: Props) {
+export function OptionCard({ label, votes, remainingCredits, onChange, annotation }: Props) {
   const currentCost = creditCost(votes);
   const upCost = nextVoteCost(votes);
   const refund = refundForDecrement(votes);
@@ -97,6 +99,25 @@ export function OptionCard({ label, votes, remainingCredits, onChange }: Props) 
             </button>
           </div>
         </div>
+
+        {/* F19 cost lesson. Sits below the working row so the ± buttons
+            never move when it appears/leaves. role="status" so the prose
+            reaches screen readers (the persistent count region above
+            already carries the raw numbers). */}
+        <AnimatePresence initial={false}>
+          {annotation && (
+            <motion.p
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+              role="status"
+              className="overflow-hidden rounded-xl bg-grad-brand-soft px-3 py-2 text-xs leading-relaxed text-foreground"
+            >
+              {annotation}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
     </li>
   );

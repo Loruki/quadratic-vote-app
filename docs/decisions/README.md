@@ -150,6 +150,22 @@ on embodiment to be validated by the next dogfood, not a measured comprehension 
 that asymmetry. Deleted the refund line: tapping − is free and reversible, so it teaches
 itself. The refund moved into the − button's accessible name.
 
+### 32. Split the teaching: orientation in the banner, the lesson at the tap
+
+With the gnomon grid drawing the cost, the first-visit banner's "2 votes = 4, 3 = 9, 4 = 16"
+arithmetic became redundant — the cards now _show_ it. Divided the teaching by job: the
+banner slims to the two things the cards can't say (your budget, and "you may tap one option
+many times" — the anti-pattern fix from #12), and a new just-in-time annotation (the
+reviews' "F19") teaches _why_ it's quadratic in two beats — beat 1 on the first vote
+("that cost 1 credit"), beat 2 the first time an option hits 2 ("that one cost 3, not 1").
+Beat 2 is deliberately the lesson; beat 1 is just the hook, because 1 credit is the one step
+that doesn't feel quadratic. **Trade-off:** a second first-visit teaching layer alongside the
+banner — accepted because they're now complementary, not duplicative (orientation vs.
+cost-at-the-moment), gated by a separate `qv_cost_taught` flag, and the annotation is
+transient. **Continues #12's lesson:** that ADR said "explanations get dismissed; the
+interaction must teach" — F19 is that taken literally, teaching at the moment of the tap
+rather than in a banner read before any tapping.
+
 ---
 
 ## Engineering
