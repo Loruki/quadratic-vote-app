@@ -1,10 +1,12 @@
 import { eq } from 'drizzle-orm';
+import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import { db, schema } from '@/db';
 import { jsonError, parseJson } from '@/lib/api';
 import { creditCost, totalCreditsSpent } from '@/lib/quadratic';
 import { submitVoteSchema } from '@/lib/validators/poll';
 import { getOrCreateVoterId } from '@/lib/voter-cookie';
+import { trackServer, distinctIdFromCookie } from '@/growth-kit/server';
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id: pollId } = await ctx.params;
@@ -15,6 +17,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
   const cleaned = input.allocations.filter((a) => a.numVotes !== 0);
   const spent = totalCreditsSpent(cleaned);
+
+  let resolvedVoterId = '';
 
   try {
     await db.transaction(async (tx) => {
@@ -62,6 +66,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         const { voterId: cookieVoter } = await getOrCreateVoterId();
         voterId = cookieVoter;
       }
+      resolvedVoterId = voterId;
 
       let ballot;
       try {
@@ -99,6 +104,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     if (err instanceof VoteError) return jsonError(err.message, err.status);
     throw err;
   }
+
+  // Activation captured server-side (blocker-proof): a vote was cast. Stitch to
+  // the anonymous visitor so the funnel stays one person; fall back to voterId.
+  const phKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const store = await cookies();
+  const distinctId =
+    distinctIdFromCookie(phKey ? store.get(`ph_${phKey}_posthog`)?.value : undefined) ??
+    resolvedVoterId ??
+    pollId;
+  await trackServer(distinctId, 'activated', { pollId, creditsSpent: spent });
 
   return Response.json({ ok: true, creditsSpent: spent });
 }

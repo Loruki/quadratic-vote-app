@@ -247,6 +247,20 @@ Decided **not** to rename (clunkier) and **not** to buy another domain yet — p
 links, they don't type the domain. Revisit `quadratic.vote` (which literally spells the brand)
 only _after_ the product shows signal. A rich person's problem; solve it when it's earned.
 
+### 33. Analytics via a shared growth-kit — proxied client + server-side conversions
+
+Instrumented the funnel (`landing_view` → `signup_start` → `signup_complete` → `activated` → `shared`)
+with a reusable drop-in kit (`src/growth-kit`, PostHog) shared across the side projects, not a
+bespoke setup per app. Two deliberate choices for **blocker resilience**: client events route
+through a same-origin `/ingest` reverse proxy (defeats domain-based ad blockers — most users), and
+the events that matter — `signup_complete` (poll created) and `activated` (vote cast) — fire
+**server-side** in the API routes, where no blocker exists. Server events are stitched to the
+anonymous visitor via the PostHog cookie's `distinct_id` so the funnel stays one person.
+**Trade-off:** top-of-funnel (`landing_view`, `signup_start`) stays client-side and best-effort —
+a small slice of hyper-blocked visitors is lost, accepted because no browser analytics is 100%
+blocker-proof. `shared` fires on copying the open voter link only (tokenized per-voter links not
+instrumented yet).
+
 ---
 
 ## Strategy & process

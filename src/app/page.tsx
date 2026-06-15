@@ -2,10 +2,12 @@ import Link from 'next/link';
 import { ArrowRight, Coins, Smartphone, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CostCurveDemo } from '@/components/landing/cost-curve-demo';
+import { TrackView } from '@/growth-kit';
 
 export default function Home() {
   return (
     <main className="flex-1">
+      <TrackView event="landing_view" />
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="hero-mesh pointer-events-none absolute inset-0 -z-10" aria-hidden />

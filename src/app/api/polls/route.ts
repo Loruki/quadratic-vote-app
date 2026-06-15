@@ -1,6 +1,8 @@
+import { cookies } from 'next/headers';
 import { db, schema } from '@/db';
 import { parseJson } from '@/lib/api';
 import { createPollSchema } from '@/lib/validators/poll';
+import { trackServer, distinctIdFromCookie } from '@/growth-kit/server';
 
 export async function POST(request: Request) {
   const parsed = await parseJson(request, createPollSchema);
@@ -42,6 +44,19 @@ export async function POST(request: Request) {
     }
 
     return { poll, voterTokens };
+  });
+
+  // Conversion captured server-side (blocker-proof), stitched to the anonymous
+  // visitor who did landing_view/signup_start so the funnel stays one person.
+  const phKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const store = await cookies();
+  const distinctId =
+    distinctIdFromCookie(phKey ? store.get(`ph_${phKey}_posthog`)?.value : undefined) ??
+    tokens.poll.id;
+  await trackServer(distinctId, 'signup_complete', {
+    method: 'poll_create',
+    voterMode: tokens.poll.voterMode,
+    visibility: tokens.poll.visibility,
   });
 
   const base = `/poll/${tokens.poll.id}`;
