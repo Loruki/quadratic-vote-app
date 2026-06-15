@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Eyebrow } from '@/components/shared/eyebrow';
 import { CreatePollForm } from '@/components/poll/create-poll-form';
+import { TrackView } from '@/growth-kit';
 
 export const metadata: Metadata = {
   title: 'Create a poll — Quadratic Vote',
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function CreatePage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 sm:py-16">
+      <TrackView event="signup_start" />
       <header className="space-y-3">
         <Eyebrow>New poll</Eyebrow>
         <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">

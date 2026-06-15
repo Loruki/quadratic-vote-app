@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { MotionProvider } from '@/components/shared/motion-provider';
 import { SiteHeader } from '@/components/shared/site-header';
 import { SiteFooter } from '@/components/shared/site-footer';
+import { PostHogProvider } from '@/growth-kit';
 import './globals.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -34,12 +35,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background">
-        <MotionProvider>
-          <SiteHeader />
-          {children}
-          <SiteFooter />
-          <Toaster richColors position="top-center" />
-        </MotionProvider>
+        <PostHogProvider app="quadratic-vote">
+          <MotionProvider>
+            <SiteHeader />
+            {children}
+            <SiteFooter />
+            <Toaster richColors position="top-center" />
+          </MotionProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

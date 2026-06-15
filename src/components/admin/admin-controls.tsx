@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { downloadVoterTokensCsv } from '@/lib/backup';
+import { growth } from '@/growth-kit';
 
 interface TokenEntry {
   token: string;
@@ -114,7 +115,15 @@ function OpenVoterLink({ pollId, origin }: { pollId: string; origin: string }) {
             Anyone with this link can vote — one ballot per browser.
           </p>
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={() => copy(url)}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            void copy(url);
+            growth.shared({ method: 'copy', surface: 'voter_link' });
+          }}
+        >
           {copied ? (
             <>
               <Check className="mr-1 h-3.5 w-3.5" /> Copied
