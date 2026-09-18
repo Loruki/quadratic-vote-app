@@ -195,6 +195,8 @@ AI-assisted (Claude Code), shipped over a weekend. The [`.claude/`](.claude) fol
 the skills and review agents I used. I think "a PM who can scope *and* ship with AI" is the
 honest, interesting version of this story — so I'm not hiding it.
 
-## License
+## Contact
 
-MIT.
+Questions or feedback: [contact@quadratic-voting.com](mailto:contact@quadratic-voting.com).
+
+© Quadratic Vote. All rights reserved.
