@@ -16,6 +16,7 @@ docs/pm/
 │   ├── key-findings.md                         # 7 findings → product decisions (start here)
 │   ├── qv-implementations-and-theory.md        # Academic foundations, real-world case studies
 │   ├── competitive-analysis.md                 # 10 existing tools analyzed, UX patterns, gap analysis
+│   ├── demand-and-distribution.md              # Reddit/HN research: is QV needed, useful, how to distribute
 │   └── sources.md                              # All research URLs bookmarked by category
 └── data/
     └── quadratic-voting-context.md             # Project context, audiences, competitors, use cases

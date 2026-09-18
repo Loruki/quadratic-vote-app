@@ -65,3 +65,12 @@ Bookmarked resources for quadratic voting research. Organized by category.
 - [Tim Daub: UX Problems of Quadratic Voting](https://timdaub.github.io/2022/03/27/the-user-experience-problems-of-quadratic-voting/)
 - [WTF is QF (best interactive explainer pattern)](https://wtfisqf.com/)
 - [NN/G: Slider Design Best Practices](https://www.nngroup.com/articles/gui-slider-controls/)
+
+## Community Research (Demand & Distribution)
+
+- [HN: The user experience problems of quadratic voting](https://news.ycombinator.com/item?id=30822489)
+- [HN: The Economist QV article thread](https://news.ycombinator.com/item?id=29586658)
+- [HN: Show HN QV polling app (4 points, 0 comments)](https://news.ycombinator.com/item?id=29618875)
+- [CPR: Court rules QV system violates open meetings law (2024)](https://www.cpr.org/2024/01/05/democrats-secret-voting-system-colorado-legislature/)
+- [qv.geek.sg](https://qv.geek.sg/) · [Voqua](https://voqua.io/)
+- [PullPush Reddit archive API](https://pullpush.io/)
