@@ -46,7 +46,7 @@ export default function Home() {
               </Button>
             </div>
             <p className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
-              <Zap className="h-3.5 w-3.5 text-primary" /> No signup. No wallet. Open source.
+              <Zap className="h-3.5 w-3.5 text-primary" /> No signup. No wallet. Anonymous.
             </p>
           </div>
 

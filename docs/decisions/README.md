@@ -286,3 +286,12 @@ passively. No pressure to grow something unvalidated.
 The meta-decision. Most product changes above (#11, #12, #13, #16) came not from planning but from
 shipping and watching ~12 colleagues actually vote. Thirty minutes of real use surfaced problems no
 test caught. The build was the cheap part; the dogfooding was the product work.
+
+### 34. Stop advertising the repo — a contact address instead of a GitHub link
+
+The site pointed visitors at the GitHub repo ("Open source" in the landing tagline, a GitHub
+link and "MIT" in the footer). I no longer want the code to be the public face of the product.
+I removed all three and put `contact@quadratic-voting.com` in the footer as the one channel for
+visitors. **Trade-off:** a voting tool gives up the trust signal of "read the code yourself",
+and this partly reverses #28, which counted on the open-source repo to bring in visitors on its own.
+A human inbox is a weaker transparency story, but it's a better way to hear from real users.
