@@ -1,19 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Globe, Link2, Lock, Plus, Trash2, Users } from 'lucide-react';
+import { Eye, EyeOff, Globe, Link2, Lock, Plus, Trash2, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import {
-  CREDIT_OPTIONS,
-  DEFAULT_CREDITS,
-  MAX_OPTIONS,
-  MAX_VOTERS_TOKENIZED,
-  MIN_OPTIONS,
-} from '@/lib/constants';
+import { CREDIT_OPTIONS, MAX_OPTIONS, MAX_VOTERS_TOKENIZED, MIN_OPTIONS } from '@/lib/constants';
+import { POLL_TEMPLATES, recommendedCredits, type PollTemplate } from '@/lib/templates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +22,7 @@ const formSchema = z.object({
   creditsPerVoter: z.number().int(),
   visibility: z.enum(['public', 'unlisted']),
   voterMode: z.enum(['open', 'tokenized']),
+  ballotVisibility: z.enum(['anonymous', 'named']),
   voters: z.string().optional(),
   options: z
     .array(z.object({ value: z.string().trim().min(1, 'Option cannot be empty').max(140) }))
@@ -48,29 +44,48 @@ function parseVoterList(raw: string): string[] {
 // the steps still play out in full so the user doesn't wonder "did it work?".
 const MIN_CREATION_OVERLAY_MS = 1500;
 
-export function CreatePollForm() {
+function valuesFor(template: PollTemplate | undefined): FormValues {
+  const options = template ? template.options : ['', ''];
+  return {
+    title: template?.title ?? '',
+    description: template?.description ?? '',
+    creditsPerVoter: recommendedCredits(options.length),
+    visibility: 'unlisted',
+    voterMode: 'open',
+    ballotVisibility: 'anonymous',
+    voters: '',
+    options: options.map((value) => ({ value })),
+  };
+}
+
+export function CreatePollForm({ template }: { template?: PollTemplate }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState<ConfirmPayload | null>(null);
   const [showProgress, setShowProgress] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState<string | undefined>(template?.id);
+  // Until the creator picks a budget by hand, it follows the option count.
+  const [creditsTouched, setCreditsTouched] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      creditsPerVoter: DEFAULT_CREDITS,
-      visibility: 'unlisted',
-      voterMode: 'open',
-      voters: '',
-      options: [{ value: '' }, { value: '' }],
-    },
+    defaultValues: valuesFor(template),
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'options',
   });
+
+  function syncCredits(optionCount: number) {
+    if (!creditsTouched) form.setValue('creditsPerVoter', recommendedCredits(optionCount));
+  }
+
+  function applyTemplate(t: PollTemplate) {
+    form.reset({ ...valuesFor(t), voterMode: form.getValues('voterMode') });
+    setCreditsTouched(false);
+    setActiveTemplate(t.id);
+  }
 
   // Step 1: the visible "Create poll" button only opens the confirmation
   // dialog with a summary. We don't hit the server until the user confirms.
@@ -88,6 +103,7 @@ export function CreatePollForm() {
       voterMode: values.voterMode,
       visibility: values.visibility,
       voterCount: voters.length || undefined,
+      ballotVisibility: values.voterMode === 'tokenized' ? values.ballotVisibility : 'anonymous',
     });
   });
 
@@ -115,6 +131,8 @@ export function CreatePollForm() {
           creditsPerVoter: values.creditsPerVoter,
           visibility: values.visibility,
           voterMode: values.voterMode,
+          ballotVisibility:
+            values.voterMode === 'tokenized' ? values.ballotVisibility : 'anonymous',
           voters: values.voterMode === 'tokenized' ? voters : undefined,
           options: values.options.map((o) => o.value),
         }),
@@ -157,9 +175,43 @@ export function CreatePollForm() {
   const credits = form.watch('creditsPerVoter');
   const voterMode = form.watch('voterMode');
   const visibility = form.watch('visibility');
+  const ballotVisibility = form.watch('ballotVisibility');
+  const recommended = recommendedCredits(fields.length);
+  // Templates replace the whole form, so only offer them before the creator
+  // has typed anything of their own (a freshly applied template counts as clean).
+  const showTemplates = !form.formState.isDirty;
 
   return (
     <form onSubmit={onPreviewSubmit} className="space-y-8" noValidate>
+      {showTemplates && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Start from a template</p>
+          <div className="flex flex-wrap gap-2">
+            {POLL_TEMPLATES.map((t) => {
+              const active = activeTemplate === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => applyTemplate(t)}
+                  aria-pressed={active}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    active
+                      ? 'border-transparent bg-grad-brand text-primary-foreground shadow-soft'
+                      : 'border-border bg-background hover:border-primary/40 hover:text-primary'
+                  }`}
+                >
+                  {t.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Fills in a title and options you can edit — or just start typing below.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="title">Poll title</Label>
         <Input
@@ -204,7 +256,10 @@ export function CreatePollForm() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => remove(idx)}
+                onClick={() => {
+                  remove(idx);
+                  syncCredits(fields.length - 1);
+                }}
                 disabled={fields.length <= MIN_OPTIONS}
                 aria-label={`Delete option ${idx + 1}`}
               >
@@ -219,7 +274,10 @@ export function CreatePollForm() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => append({ value: '' })}
+          onClick={() => {
+            append({ value: '' });
+            syncCredits(fields.length + 1);
+          }}
           disabled={fields.length >= MAX_OPTIONS}
           className="w-full"
         >
@@ -229,15 +287,18 @@ export function CreatePollForm() {
 
       <div className="space-y-3">
         <Label>Credits per voter</Label>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {CREDIT_OPTIONS.map((c) => {
             const active = credits === c;
             return (
               <button
                 key={c}
                 type="button"
-                onClick={() => form.setValue('creditsPerVoter', c, { shouldDirty: true })}
-                className={`rounded-xl border px-2 py-3 text-sm font-semibold tabular-nums transition-all ${
+                onClick={() => {
+                  setCreditsTouched(true);
+                  form.setValue('creditsPerVoter', c, { shouldDirty: true });
+                }}
+                className={`relative rounded-xl border px-2 pb-2.5 pt-3 text-sm font-semibold tabular-nums transition-all ${
                   active
                     ? 'border-transparent bg-grad-brand text-primary-foreground shadow-brand'
                     : 'border-border bg-card hover:bg-muted'
@@ -245,15 +306,27 @@ export function CreatePollForm() {
                 aria-pressed={active}
               >
                 {c}
+                <span
+                  className={`block whitespace-nowrap text-[10px] font-medium ${
+                    c === recommended
+                      ? active
+                        ? 'text-primary-foreground/85'
+                        : 'text-primary'
+                      : 'invisible'
+                  }`}
+                >
+                  Best fit
+                </span>
               </button>
             );
           })}
         </div>
         <p className="text-xs text-muted-foreground">
-          More credits = more nuance. <span className="font-medium text-foreground">100</span>{' '}
-          is a good default — a voter can put up to{' '}
+          <span className="font-medium text-foreground">{recommended}</span> suits{' '}
+          {`${fields.length} options`}{' '}— enough room for nuance, and nobody gets stuck with credits
+          they can&apos;t spend. A voter can put up to{' '}
           <span className="font-medium text-foreground">{Math.floor(Math.sqrt(credits))}</span>{' '}
-          votes on a single option.
+          votes on a single option. Credits aren&apos;t money: everyone gets the same amount.
         </p>
       </div>
 
@@ -263,7 +336,10 @@ export function CreatePollForm() {
         <div className="grid gap-2 sm:grid-cols-2">
           <OptionTile
             active={voterMode === 'open'}
-            onClick={() => form.setValue('voterMode', 'open', { shouldDirty: true })}
+            onClick={() => {
+              form.setValue('voterMode', 'open', { shouldDirty: true });
+              form.setValue('ballotVisibility', 'anonymous');
+            }}
             icon={<Link2 className="h-4 w-4" />}
             title="Anyone with the link"
             body="Cookie-based identity. One vote per browser. Easiest to share casually."
@@ -296,6 +372,30 @@ export function CreatePollForm() {
           </div>
         )}
       </div>
+
+      {voterMode === 'tokenized' && (
+        <div className="space-y-3">
+          <Label>Ballots</Label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <OptionTile
+              active={ballotVisibility === 'anonymous'}
+              onClick={() =>
+                form.setValue('ballotVisibility', 'anonymous', { shouldDirty: true })
+              }
+              icon={<EyeOff className="h-4 w-4" />}
+              title="Anonymous"
+              body="Results show totals and a breakdown — never who voted what."
+            />
+            <OptionTile
+              active={ballotVisibility === 'named'}
+              onClick={() => form.setValue('ballotVisibility', 'named', { shouldDirty: true })}
+              icon={<Eye className="h-4 w-4" />}
+              title="Named"
+              body="Results list each person's votes. Voters are told before they vote. For decisions people should own."
+            />
+          </div>
+        </div>
+      )}
 
       {/* Visibility */}
       <div className="space-y-3">

@@ -40,7 +40,7 @@ if (!process.env.DATABASE_URL) {
 interface SeedPoll {
   title: string;
   description?: string;
-  creditsPerVoter: 25 | 50 | 100 | 150 | 200;
+  creditsPerVoter: 50 | 100 | 150 | 200;
   options: string[];
   /** Number of fake voters to generate. */
   voters: number;

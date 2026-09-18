@@ -204,6 +204,7 @@ function TokenizedVoterList({
   async function copyOne(t: TokenEntry) {
     const ok = await copyRow(urlFor(t));
     if (ok) {
+      growth.shared({ method: 'copy', surface: 'voter_token_link' });
       setCopiedToken(t.token);
       setTimeout(() => setCopiedToken((cur) => (cur === t.token ? null : cur)), 1200);
     }
@@ -218,9 +219,11 @@ function TokenizedVoterList({
       return;
     }
     await copyAll(lines.join('\n'), `${lines.length} unused link${lines.length === 1 ? '' : 's'} copied`);
+    growth.shared({ method: 'copy', surface: 'voter_token_links_all', count: lines.length });
   }
 
   function exportCsv() {
+    growth.shared({ method: 'csv', surface: 'voter_token_links_all', count: tokens.length });
     downloadVoterTokensCsv(
       pollId,
       tokens.map((t) => ({ url: urlFor(t), label: t.label, consumedAt: t.consumedAt })),

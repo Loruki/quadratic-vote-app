@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Info } from 'lucide-react';
+import { Eye, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -20,6 +20,8 @@ interface Props {
   creditsPerVoter: number;
   voterToken?: string;
   voterLabel?: string | null;
+  /** Poll publishes ballots by name — the voter must know before voting. */
+  namedBallot?: boolean;
 }
 
 type AllocationMap = Record<string, number>;
@@ -47,6 +49,7 @@ export function VotingClient({
   creditsPerVoter,
   voterToken,
   voterLabel,
+  namedBallot = false,
 }: Props) {
   const router = useRouter();
   const isClient = useIsClient();
@@ -211,6 +214,18 @@ export function VotingClient({
             Voting as <span className="text-grad-brand font-semibold">{voterLabel}</span>
           </span>
           <span className="text-muted-foreground">· personalized link</span>
+        </div>
+      )}
+      {namedBallot && (
+        <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-soft">
+          <Eye className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <span>
+            <span className="font-medium">Your ballot will be public.</span>{' '}
+            <span className="text-muted-foreground">
+              The organizer chose named ballots: everyone who sees the results will see how{' '}
+              {voterLabel ? voterLabel : 'you'} voted.
+            </span>
+          </span>
         </div>
       )}
       <BudgetBar spent={spent} budget={creditsPerVoter} />

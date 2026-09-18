@@ -26,6 +26,9 @@ export function SiteFooter() {
           <Link href="/my" className="transition-colors hover:text-foreground">
             My polls
           </Link>
+          <Link href="/vs/dot-voting" className="transition-colors hover:text-foreground">
+            vs dot voting
+          </Link>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
             className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"

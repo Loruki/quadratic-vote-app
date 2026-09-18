@@ -129,6 +129,38 @@ describe('createPollSchema (extended)', () => {
     });
     expect(r.success).toBe(true);
   });
+
+  it('defaults ballotVisibility to anonymous', () => {
+    const r = createPollSchema.safeParse({ title: 'x', options: ['a', 'b'], creditsPerVoter: 100 });
+    expect(r.success && r.data.ballotVisibility).toBe('anonymous');
+  });
+
+  it('accepts named ballots on tokenized polls', () => {
+    const r = createPollSchema.safeParse({
+      title: 'x',
+      options: ['a', 'b'],
+      creditsPerVoter: 100,
+      voterMode: 'tokenized',
+      voters: ['Alice'],
+      ballotVisibility: 'named',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejects named ballots on open polls (no names to show)', () => {
+    const r = createPollSchema.safeParse({
+      title: 'x',
+      options: ['a', 'b'],
+      creditsPerVoter: 100,
+      ballotVisibility: 'named',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects the retired 25-credit budget', () => {
+    const r = createPollSchema.safeParse({ title: 'x', options: ['a', 'b'], creditsPerVoter: 25 });
+    expect(r.success).toBe(false);
+  });
 });
 
 describe('updatePollSchema', () => {

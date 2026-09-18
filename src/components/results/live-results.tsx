@@ -1,25 +1,14 @@
 'use client';
 
-import { Activity, Lock, Wallet, Users } from 'lucide-react';
+import { Activity, Eye, Lock, UserCheck, Wallet, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
+import type { ResultsView } from '@/lib/results';
+import { NamedBallots } from './named-ballots';
 import { ResultsChart } from './results-chart';
-import { SMALL_GROUP_THRESHOLD } from '@/lib/constants';
+import { SmallGroupNote } from './small-group-note';
 
-interface Row {
-  id: string;
-  label: string;
-  netVotes: number;
-  creditsSpent: number;
-  position: number;
-}
-
-interface LiveData {
-  poll: { id: string; title: string; isClosed: boolean; creditsPerVoter: number };
-  options: Row[];
-  voterCount: number;
-  averageCreditsUtilization: number;
-}
+type LiveData = ResultsView;
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -52,6 +41,15 @@ export function LiveResults({ pollId, initial }: Props) {
           icon={<Wallet className="h-3.5 w-3.5" />}
           label={`${Math.round(view.averageCreditsUtilization * 100)}% avg. budget used`}
         />
+        {view.turnout && (
+          <StatChip
+            icon={<UserCheck className="h-3.5 w-3.5" />}
+            label={`${view.turnout.voted} of ${view.turnout.invited} invited voted`}
+          />
+        )}
+        {view.ballots && (
+          <StatChip icon={<Eye className="h-3.5 w-3.5" />} label="Named ballots" />
+        )}
         {view.poll.isClosed ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
             <Lock className="h-3 w-3" /> Closed
@@ -71,18 +69,13 @@ export function LiveResults({ pollId, initial }: Props) {
       ) : (
         <>
           <div className="mt-8">
-            <ResultsChart data={ranked} />
+            <ResultsChart data={ranked} voterCount={view.voterCount} />
           </div>
-
-          {view.voterCount < SMALL_GROUP_THRESHOLD && (
-            <div className="mt-5 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-              Quadratic voting works best with larger groups. With fewer than{' '}
-              {SMALL_GROUP_THRESHOLD} voters, individual allocations have outsized impact on
-              results — interpret with care.
-            </div>
-          )}
+          <SmallGroupNote voterCount={view.voterCount} />
         </>
       )}
+
+      {view.ballots && <NamedBallots ballots={view.ballots} options={view.options} />}
     </>
   );
 }

@@ -2,10 +2,10 @@ import { expect, test } from '@playwright/test';
 
 test('full flow: landing → create → vote → results', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /vote with/i })).toBeVisible();
-  await page.getByRole('link', { name: /create a poll/i }).first().click();
+  await expect(page.getByRole('heading', { name: /cares about most/i })).toBeVisible();
+  await page.getByRole('link', { name: /start a poll/i }).first().click();
 
-  await expect(page).toHaveURL(/\/create$/);
+  await expect(page).toHaveURL(/\/create\?from=landing$/);
   await page.getByLabel(/poll title/i).fill('Pick a team lunch');
   await page.getByRole('textbox', { name: 'Option 1' }).fill('Pizza');
   await page.getByRole('textbox', { name: 'Option 2' }).fill('Sushi');
@@ -27,6 +27,8 @@ test('full flow: landing → create → vote → results', async ({ page }) => {
 
   await page.getByRole('link', { name: /open voter page/i }).click();
   await expect(page).toHaveURL(/\/poll\/[^/]+$/);
+  // Taps before hydration land on inert server HTML — wait for the client.
+  await page.waitForLoadState('networkidle');
 
   // Cast a realistic ballot: 6 votes on Pizza (36 credits) + 3 on Sushi
   // (9 credits) = 45/100 credits, above the 30% low-usage warning
@@ -39,13 +41,16 @@ test('full flow: landing → create → vote → results', async ({ page }) => {
     await page.getByRole('button', { name: /add a vote to Sushi/i }).click();
   }
 
+  await expect(page.getByText('45 / 100 credits').first()).toBeVisible();
+
   // Open the confirmation dialog, then confirm.
   await page.getByRole('button', { name: 'Submit vote' }).click();
   await expect(page.getByRole('heading', { name: /submit your vote/i })).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Submit vote' }).click();
 
   await expect(page).toHaveURL(/\/results$/);
-  await expect(page.getByText(/1 voter/i)).toBeVisible();
+  await expect(page.getByText('1 voter', { exact: true })).toBeVisible();
+  await expect(page.getByText(/backed by 1 of 1 voter/i).first()).toBeVisible();
 });
 
 test('one-click submitters are blocked below 30% of budget', async ({ page, request }) => {
@@ -150,7 +155,7 @@ test('a voter who was already taught sees no cost lesson', async ({ page, reques
 
 test('budget exceeded API rejects oversized allocations', async ({ request }) => {
   const created = await request.post('/api/polls', {
-    data: { title: 'budget test', options: ['A', 'B'], creditsPerVoter: 25 },
+    data: { title: 'budget test', options: ['A', 'B'], creditsPerVoter: 50 },
   });
   expect(created.ok()).toBe(true);
   const { id, voterUrl } = await created.json();

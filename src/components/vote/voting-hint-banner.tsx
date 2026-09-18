@@ -67,6 +67,9 @@ export function VotingHintBanner({ creditsPerVoter, optionsCount, onDismiss }: P
             </span>{' '}
             on any option — spend more where you care most.
           </p>
+          <p className="text-xs text-foreground/70">
+            Everyone gets the same credits. They aren&apos;t money — nothing is bought.
+          </p>
         </div>
       </div>
     </motion.div>

@@ -13,7 +13,7 @@ import { creditCost } from '../lib/quadratic';
 interface SeedPoll {
   title: string;
   description?: string;
-  creditsPerVoter: 25 | 50 | 100 | 150 | 200;
+  creditsPerVoter: 50 | 100 | 150 | 200;
   options: string[];
   /** Roughly how many fake voters to generate. */
   voters: number;
@@ -96,7 +96,7 @@ const SEEDS: SeedPoll[] = [
   {
     title: 'Name our team mascot',
     description: 'Eight contenders. Most credits wins. Yes, it’s silly.',
-    creditsPerVoter: 25,
+    creditsPerVoter: 50,
     voters: 19,
     options: ['Bytey', 'Capybara Carl', 'Sir Crashes-a-Lot', 'Pixel', 'Q-bert', 'Glitch', 'Mango', 'Astra'],
     weights: [0.12, 0.18, 0.08, 0.14, 0.16, 0.08, 0.12, 0.12],

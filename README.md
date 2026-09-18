@@ -1,10 +1,10 @@
 # Quadratic Vote
 
-**Vote with _how much_ you care — not just _which_ you prefer.**
+**Find out what your group cares about most — without one loud voter deciding for everyone.**
 
-A quadratic-voting web app built for people who've never heard of quadratic voting.
-Create a poll, share a link, vote on your phone in 90 seconds. No signup, no wallet,
-no math degree.
+A group-prioritization tool for retros, roadmaps, budgets and trips, powered by quadratic
+voting. Pick a template, share a link, everyone votes on their phone in 90 seconds.
+No signup, nothing to pay, no math degree.
 
 🔗 **Live:** [quadratic-voting.com](https://quadratic-voting.com) · 🧠 **The thinking:** [`docs/pm/`](docs/pm) · 🏗️ Next.js 16 · Drizzle · Postgres
 
@@ -24,8 +24,10 @@ every voter gets a **credit budget**, and concentrating votes on one option cost
 (N votes = N² credits). So caring *deeply* about something means spending real budget on it —
 the system captures **intensity of preference**, which normal polling throws away.
 
-The mechanism is proven — Colorado's legislature, Gitcoin's $50M+ grant rounds, Taiwan's
-participatory budgeting. But it's **trapped in the world of people who already know what it is.**
+The mechanism has real-world use: Colorado House Democrats ranked budget bills with it
+for five years (until a judge stopped it in 2024, over secret ballots rather than the
+method), and Gitcoin has run quadratic *funding* rounds for years. But it's **trapped in
+the world of people who already know what it is.**
 Every existing tool (RadicalxChange, Snapshot, Civicbase) is built by and for the QV community:
 wallets, governance jargon, desktop-first.
 
@@ -57,6 +59,28 @@ The budget bar fills as you spend; each card shows the cost of the *next* vote s
 quadratic curve is visible in the moment. Results refresh live while a poll is open.
 
 ![Explore](docs/screenshots/explore.png)
+
+## V2: what community research changed
+
+After shipping, I researched demand on Reddit and Hacker News
+([write-up](docs/pm/research/demand-and-distribution.md)). The finding that reshaped the
+product: **nobody searches for "quadratic voting".** Outside crypto and voting-theory
+circles, the term barely appears, and when it does, it gets "I have zero faith people would
+understand it" or "snake oil". But everyone runs retros, ranks roadmaps and splits budgets,
+usually with dot voting, where one person can pile every dot on their pet idea.
+
+So V2 sells the job, not the mechanism:
+
+| Research finding | What shipped |
+|---|---|
+| People search for the job, not "QV" | Landing, metadata and `/create` lead with group prioritization; QV is the explanation of how it works |
+| The real competitor is dot voting | [`/vs/dot-voting`](src/app/vs/dot-voting/page.tsx) comparison page (it says when dot voting is the better choice), plus sitemap and robots |
+| Blank forms, unfamiliar method | 5 templates (retro, roadmap, offsite, budget, trip), one tap from the landing page |
+| Credits voters can't spend with small budgets | Budget recommendation follows the option count; 25 credits dropped |
+| Real users couldn't tell if results were plausible | Every option shows *backed by N of M voters* and an expandable breakdown you can add up by hand |
+| People assume votes cost money | "Credits aren't money, nothing is bought", on the voting page, create form and FAQ |
+| Colorado's QV use was banned for being secret | Optional **named ballots** (tokenized polls): results show who voted what, and voters are told first. Plus turnout ("7 of 12 invited voted") |
+| The product's growth comes from voters | Voters see "Got a decision of your own?" with templates after voting; poll creation records whether the creator was a voter first |
 
 ## Product decisions & trade-offs
 
@@ -101,12 +125,11 @@ None of these showed up in tests. They showed up in 30 minutes of real use. That
 
 ## What I'd do next (ranked)
 
-1. **Tighten the viral loop** — the product *is* the channel; every shared poll should make the
-   next one effortless to create.
-2. **One "run-a-poll" partnership** — get a newsletter/community to run a real vote through it;
-   that activates the loop at scale far better than ads (which make no sense with no business model).
-3. **Poll templates** — "Pick a name", "Prioritize features", "Allocate budget" to kill the
-   blank-form anxiety.
+1. **Measure the voter → creator loop** now that it's instrumented (`signup_start.from`,
+   `signup_complete.wasVoter`), and iterate on the post-vote CTA before any other channel.
+2. **Answer "how do we decide X as a group?" threads** in r/agile, r/scrum, r/ProductManagement
+   and facilitation communities, rather than posting launch announcements.
+3. **One "run-a-poll" partnership** — get a newsletter/community to run a real vote through it.
 4. **Rate limiting + a GDPR cookie notice** before any real volume.
 5. *(Longer shot)* **QV as a headless decision primitive for AI agents** — the API-first
    architecture already leaves this door open.
@@ -130,6 +153,7 @@ voter, token unconsumed) is enforced inside one Drizzle transaction. The
 ```
 polls         id, title, description, credits_per_voter, admin_token,
               visibility ('public' | 'unlisted'), voter_mode ('open' | 'tokenized'),
+              ballot_visibility ('anonymous' | 'named' — named needs tokenized),
               is_closed, created_at, closes_at
 options       N labels per poll
 voter_tokens  pre-issued per-voter URL tokens (tokenized polls only).
@@ -147,9 +171,10 @@ and submitting burns the token in the same transaction.
 
 | Route | What |
 |---|---|
-| `/` | Landing with interactive cost-curve demo |
+| `/` | Landing: templates, cost-curve demo, dot-voting comparison, FAQ |
+| `/vs/dot-voting` | Dot voting vs quadratic voting comparison page |
 | `/explore` | Grid of public polls |
-| `/create` | Poll creation |
+| `/create` | Poll creation (`?template=retro` pre-fills, `?from=` attributes) |
 | `/poll/[id]` | Voting (open polls) |
 | `/poll/[id]/v/[token]` | Personal voter link (tokenized) |
 | `/poll/[id]/results` | Live results (SWR) |
@@ -161,7 +186,7 @@ and submitting burns the token in the same transaction.
 | `POST /api/polls` | Create (open or tokenized) → `{ id, adminToken, voterUrl, adminUrl, voterTokens[] }` |
 | `GET /api/polls/[id]` | Poll + options + caller's allocations. Strips `adminToken`. |
 | `POST /api/polls/[id]/vote` | `{ allocations[], voterToken? }`. Identity from token or cookie. Atomic. |
-| `GET /api/polls/[id]/results` | Aggregate results. `force-dynamic`, polled every 3s. |
+| `GET /api/polls/[id]/results` | Aggregate results + per-option breakdown, turnout (tokenized), named ballots (if enabled). `force-dynamic`, polled every 3s. |
 | `PATCH /api/polls/[id]` | Admin only. Token in `Authorization: Bearer`. |
 </details>
 

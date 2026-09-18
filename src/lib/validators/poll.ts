@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  BALLOT_VISIBILITIES,
   CREDIT_OPTIONS,
   MAX_DESCRIPTION_LENGTH,
   MAX_OPTIONS,
@@ -15,6 +16,7 @@ export const pollVisibilities = ['public', 'unlisted'] as const;
 export const voterModes = ['open', 'tokenized'] as const;
 export type PollVisibility = (typeof pollVisibilities)[number];
 export type VoterMode = (typeof voterModes)[number];
+export type BallotVisibility = (typeof BALLOT_VISIBILITIES)[number];
 
 export const createPollSchema = z
   .object({
@@ -38,6 +40,9 @@ export const createPollSchema = z
       ),
     visibility: z.enum(pollVisibilities).default('unlisted'),
     voterMode: z.enum(voterModes).default('open'),
+    // 'named' publishes each voter's allocation next to their name. Only
+    // meaningful when voters have names, i.e. tokenized polls.
+    ballotVisibility: z.enum(BALLOT_VISIBILITIES).default('anonymous'),
     // Only used when voterMode === 'tokenized'. Each entry becomes one
     // pre-issued voter token. Empty strings → unlabeled token.
     voters: z
@@ -56,7 +61,11 @@ export const createPollSchema = z
       message: 'Tokenized polls need at least one voter',
       path: ['voters'],
     },
-  );
+  )
+  .refine((data) => data.ballotVisibility === 'anonymous' || data.voterMode === 'tokenized', {
+    message: 'Named ballots require a voter list',
+    path: ['ballotVisibility'],
+  });
 
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 

@@ -1,0 +1,1 @@
+ALTER TABLE "polls" ADD COLUMN "ballot_visibility" text DEFAULT 'anonymous' NOT NULL;

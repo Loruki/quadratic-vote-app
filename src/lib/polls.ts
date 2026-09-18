@@ -1,5 +1,6 @@
-import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { db, schema } from '@/db';
+import { EMPTY_OPTION_SUMMARY, summarizeVotes, type ResultsView } from '@/lib/results';
 
 export async function getPollWithOptions(pollId: string) {
   const poll = await db.query.polls.findFirst({ where: eq(schema.polls.id, pollId) });
@@ -41,29 +42,92 @@ export async function getTokensForPoll(pollId: string) {
 }
 
 export async function getResults(pollId: string) {
-  const allVotes = await db
-    .select()
+  const rows = await db
+    .select({
+      voterId: schema.votes.voterId,
+      optionId: schema.votes.optionId,
+      numVotes: schema.votes.numVotes,
+    })
     .from(schema.votes)
     .where(eq(schema.votes.pollId, pollId));
+  return summarizeVotes(rows);
+}
 
-  const byOption = new Map<string, { netVotes: number; creditsSpent: number }>();
-  const voterIds = new Set<string>();
-  let totalCreditsSpent = 0;
+/**
+ * Everything the results page needs, in one serializable shape. Used by both
+ * the server-rendered page (initial paint) and the polled API route, so the
+ * two can never drift apart.
+ */
+export async function getResultsView(pollId: string): Promise<ResultsView | null> {
+  const data = await getPollWithOptions(pollId);
+  if (!data) return null;
+  const { poll, options } = data;
+  const results = await getResults(pollId);
 
-  for (const v of allVotes) {
-    voterIds.add(v.voterId);
-    totalCreditsSpent += v.creditsSpent;
-    const cur = byOption.get(v.optionId) ?? { netVotes: 0, creditsSpent: 0 };
-    cur.netVotes += v.numVotes;
-    cur.creditsSpent += v.creditsSpent;
-    byOption.set(v.optionId, cur);
+  let turnout: ResultsView['turnout'] = null;
+  let ballots: ResultsView['ballots'] = null;
+
+  if (poll.voterMode === 'tokenized') {
+    const tokens = await getTokensForPoll(pollId);
+    turnout = {
+      voted: tokens.filter((t) => t.consumedAt).length,
+      invited: tokens.length,
+    };
+
+    if (poll.ballotVisibility === 'named') {
+      // For tokenized polls, votes.voterId is the voter_tokens row id.
+      const votesByVoter = new Map<string, { optionId: string; numVotes: number }[]>();
+      const rows = await db
+        .select({
+          voterId: schema.votes.voterId,
+          optionId: schema.votes.optionId,
+          numVotes: schema.votes.numVotes,
+        })
+        .from(schema.votes)
+        .where(eq(schema.votes.pollId, pollId));
+      for (const r of rows) {
+        const list = votesByVoter.get(r.voterId) ?? [];
+        list.push({ optionId: r.optionId, numVotes: r.numVotes });
+        votesByVoter.set(r.voterId, list);
+      }
+      ballots = tokens
+        .filter((t) => t.consumedAt)
+        .map((t, idx) => ({
+          label: t.label ?? `Voter ${idx + 1}`,
+          allocations: votesByVoter.get(t.id) ?? [],
+        }));
+    }
   }
 
   return {
-    perOption: byOption,
-    voterCount: voterIds.size,
-    totalCreditsSpent,
+    poll: {
+      id: poll.id,
+      title: poll.title,
+      description: poll.description,
+      isClosed: poll.isClosed,
+      creditsPerVoter: poll.creditsPerVoter,
+      voterMode: poll.voterMode,
+      ballotVisibility: poll.ballotVisibility,
+    },
+    options: options.map((o) => {
+      const summary = results.perOption.get(o.id) ?? EMPTY_OPTION_SUMMARY;
+      return { id: o.id, label: o.label, position: o.position, ...summary };
+    }),
+    voterCount: results.voterCount,
+    totalCreditsSpent: results.totalCreditsSpent,
+    averageCreditsUtilization:
+      results.voterCount > 0
+        ? results.totalCreditsSpent / (results.voterCount * poll.creditsPerVoter)
+        : 0,
+    turnout,
+    ballots,
   };
+}
+
+/** Has this browser's voter cookie cast a ballot on any poll? (Attribution only.) */
+export async function hasVotedAnywhere(voterId: string): Promise<boolean> {
+  const row = await db.query.ballots.findFirst({ where: eq(schema.ballots.voterId, voterId) });
+  return !!row;
 }
 
 /**

@@ -19,16 +19,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!data) return { title: 'Poll not found' };
   return {
     title: `${data.poll.title} — Quadratic Vote`,
-    description: data.poll.description ?? 'Vote with how much you care.',
+    description: data.poll.description ?? 'Spend your credits on what matters most to you. 90 seconds, no signup.',
     openGraph: {
       title: data.poll.title,
-      description: data.poll.description ?? 'Vote with how much you care.',
+      description: data.poll.description ?? 'Spend your credits on what matters most to you. 90 seconds, no signup.',
       images: ['/og.png'],
     },
     twitter: {
       card: 'summary_large_image',
       title: data.poll.title,
-      description: data.poll.description ?? 'Vote with how much you care.',
+      description: data.poll.description ?? 'Spend your credits on what matters most to you. 90 seconds, no signup.',
       images: ['/og.png'],
     },
   };

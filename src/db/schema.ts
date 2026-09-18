@@ -19,6 +19,9 @@ export const polls = pgTable(
     // 'open' = anyone with the link votes (cookie identity).
     // 'tokenized' = pre-issued per-voter links; token IS the identity.
     voterMode: text('voter_mode').notNull().default('open'),
+    // 'anonymous' = results show totals only. 'named' (tokenized only) =
+    // results also list each voter's allocation by name.
+    ballotVisibility: text('ballot_visibility').notNull().default('anonymous'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     closesAt: timestamp('closes_at', { withTimezone: true }),
   },
