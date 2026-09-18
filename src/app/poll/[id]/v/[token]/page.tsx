@@ -96,6 +96,7 @@ export default async function TokenizedVotingPage({ params }: PageProps) {
         creditsPerVoter={data.poll.creditsPerVoter}
         voterToken={token}
         voterLabel={tokenRow.label}
+        namedBallot={data.poll.ballotVisibility === 'named'}
       />
     </main>
   );

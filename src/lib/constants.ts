@@ -1,8 +1,15 @@
 export const VOTER_COOKIE = 'qv_voter_id';
 export const VOTER_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
-export const CREDIT_OPTIONS = [25, 50, 100, 150, 200] as const;
+// 25 was dropped in V2: with few credits, integer votes strand leftover
+// budget voters can't spend (see docs/pm/research/demand-and-distribution.md).
+// Existing 25-credit polls still render — only new polls can't pick it.
+export const CREDIT_OPTIONS = [50, 100, 150, 200] as const;
 export const DEFAULT_CREDITS = 100;
+
+// Ballot visibility (tokenized polls only). 'named' shows each voter's
+// allocation next to their name on the results page.
+export const BALLOT_VISIBILITIES = ['anonymous', 'named'] as const;
 
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 20;

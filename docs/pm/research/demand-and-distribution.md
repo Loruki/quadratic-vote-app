@@ -121,6 +121,8 @@ Binary yes/no questions, one-shot single-winner choices, large public or politic
 
 ## Implications for the product
 
+_Status: all shipped in V2 (September 2026). Decisions #35–#40 in the [decision log](../../decisions/README.md)._
+
 | Finding | Implication |
 | --- | --- |
 | No one searches for QV | Landing copy, SEO and OG text lead with prioritization, not the mechanism name |

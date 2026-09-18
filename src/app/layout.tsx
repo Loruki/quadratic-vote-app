@@ -14,19 +14,19 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3030',
   ),
-  title: 'Quadratic Vote — vote with how much you care',
+  title: 'Quadratic Vote — find out what your group cares about most',
   description:
-    'Create a quadratic-voting poll, share a link, vote on your phone in 90 seconds. No signup. No wallet. Just decisions that capture how much each person cares.',
+    'Prioritize as a team, a committee or a family. Everyone gets the same credits, and stacking votes on one option gets expensive, so broad support wins. One link, 90 seconds on a phone, no signup.',
   openGraph: {
     title: 'Quadratic Vote',
-    description: 'Vote with how much you care. No signup. No wallet.',
+    description: 'Find out what your group cares about most. One link, no signup.',
     type: 'website',
     images: ['/og.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Quadratic Vote',
-    description: 'Vote with how much you care. No signup. No wallet.',
+    description: 'Find out what your group cares about most. One link, no signup.',
     images: ['/og.png'],
   },
 };

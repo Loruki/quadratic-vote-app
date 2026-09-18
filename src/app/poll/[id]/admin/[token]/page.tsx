@@ -6,9 +6,9 @@ import { ArrowLeft } from 'lucide-react';
 import { eq } from 'drizzle-orm';
 import { Button } from '@/components/ui/button';
 import { db, schema } from '@/db';
-import { SMALL_GROUP_THRESHOLD } from '@/lib/constants';
-import { getPollWithOptions, getResults, getTokensForPoll } from '@/lib/polls';
+import { getPollWithOptions, getResultsView, getTokensForPoll } from '@/lib/polls';
 import { ResultsChart } from '@/components/results/results-chart';
+import { SmallGroupNote } from '@/components/results/small-group-note';
 import { AdminControls } from '@/components/admin/admin-controls';
 import { PostCreationBanner } from '@/components/admin/post-creation-banner';
 
@@ -26,7 +26,8 @@ export default async function AdminPage({ params }: PageProps) {
 
   const data = await getPollWithOptions(id);
   if (!data) notFound();
-  const results = await getResults(id);
+  const results = await getResultsView(id);
+  if (!results) notFound();
   const tokens =
     data.poll.voterMode === 'tokenized' ? await getTokensForPoll(id) : [];
 
@@ -36,14 +37,7 @@ export default async function AdminPage({ params }: PageProps) {
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3030';
   const proto = h.get('x-forwarded-proto') ?? 'http';
   const origin = `${proto}://${host}`;
-  const ranked = data.options
-    .map((o) => ({
-      id: o.id,
-      label: o.label,
-      netVotes: results.perOption.get(o.id)?.netVotes ?? 0,
-      creditsSpent: results.perOption.get(o.id)?.creditsSpent ?? 0,
-    }))
-    .sort((a, b) => b.netVotes - a.netVotes);
+  const ranked = [...results.options].sort((a, b) => b.netVotes - a.netVotes);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
@@ -98,14 +92,9 @@ export default async function AdminPage({ params }: PageProps) {
       ) : (
         <>
           <div className="mt-6">
-            <ResultsChart data={ranked} />
+            <ResultsChart data={ranked} voterCount={results.voterCount} />
           </div>
-          {results.voterCount < SMALL_GROUP_THRESHOLD && (
-            <div className="mt-5 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-              Fewer than {SMALL_GROUP_THRESHOLD} voters — individual allocations have more impact
-              on results.
-            </div>
-          )}
+          <SmallGroupNote voterCount={results.voterCount} />
         </>
       )}
     </main>

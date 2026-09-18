@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Coins, Globe, KeyRound, Link2, List, Lock, Users } from 'lucide-react';
+import { AlertTriangle, Coins, Eye, EyeOff, Globe, KeyRound, Link2, List, Lock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,6 +18,7 @@ export interface ConfirmPayload {
   voterMode: 'open' | 'tokenized';
   visibility: 'public' | 'unlisted';
   voterCount?: number; // number of named voters, tokenized only
+  ballotVisibility: 'anonymous' | 'named';
 }
 
 interface Props {
@@ -99,6 +100,23 @@ export function ConfirmCreateDialog({ open, payload, submitting, onCancel, onCon
               label="Discoverability"
               value={payload.visibility === 'public' ? 'Public — on /explore' : 'Unlisted'}
             />
+            {payload.voterMode === 'tokenized' && (
+              <SummaryRow
+                icon={
+                  payload.ballotVisibility === 'named' ? (
+                    <Eye className="h-3.5 w-3.5" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  )
+                }
+                label="Ballots"
+                value={
+                  payload.ballotVisibility === 'named'
+                    ? 'Named — everyone sees who voted what'
+                    : 'Anonymous — totals only'
+                }
+              />
+            )}
           </ul>
 
           <div className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50/40 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">

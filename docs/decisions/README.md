@@ -6,8 +6,8 @@ when real use rewrote an assumption.
 
 Lightweight ADRs: _context → decision → trade-off_. This is the fuller record behind
 the "Product decisions & trade-offs" table in the [README](../../README.md). It only
-logs actual forks-in-the-road, not implementation detail. Covers late May – early
-June 2026.
+logs actual forks-in-the-road, not implementation detail. Covers late May – September
+2026 (#35–#40 are the V2 rework driven by community research).
 
 ---
 
@@ -166,6 +166,50 @@ transient. **Continues #12's lesson:** that ADR said "explanations get dismissed
 interaction must teach" — F19 is that taken literally, teaching at the moment of the tap
 rather than in a banner read before any tapping.
 
+### 35. Lead with the job, not the mechanism
+
+The first landing page sold quadratic voting itself ("Vote with _how much_ you care", "the
+math that won Colorado, Gitcoin, Taiwan, Optimism"). **→ Changed by:** a Reddit/HN
+demand study ([write-up](../pm/research/demand-and-distribution.md)). Nobody searches for
+"quadratic voting"; outside crypto and voting-theory circles the term draws "zero faith
+people would understand it" and "snake oil". But everyone runs retros and ranks roadmaps,
+usually with dot voting. V2 leads with the job ("find out what your group cares about
+most"), adds five templates, and explains QV lower down as _how_ it works. The old proof
+line was also wrong: Colorado's use was stopped by a judge, and Optimism dropped QV, so
+the Colorado story is now told in full. **Trade-off:** the brand (#26) still says
+"Quadratic Vote" while the pitch barely does; a name/pitch mismatch accepted rather than
+a rebrand before there's any signal.
+
+### 36. Named ballots, opt-in and tokenized-only
+
+Colorado's QV use was ended by a court because the ballots were _secret_, not because the
+method failed. That made transparency a feature rather than a risk. Organizers of
+tokenized polls can now choose **named ballots**: results list each person's allocation.
+Only tokenized polls can have named ballots, because open polls have no names, and the
+schema rejects the mix. Voters see "your ballot will be public" before voting. **Trade-off:**
+a third concept on the create form (after voter mode and visibility) and a schema
+migration. It's gated so it only appears after "Specific people" is picked, and anonymous
+stays the default.
+
+### 37. Show how results add up, instead of warning about small groups
+
+Results used to say "QV works best with larger groups, interpret with care", which
+undercut the very use case we now lead with (teams, families). In real-world QV tests,
+the top complaint was not being able to tell whether results were plausible. Every option
+now shows _backed by N of M voters_ and an expandable histogram (e.g. "3 voters × 1 vote")
+that anyone can re-add by hand. It separates broad support from one enthusiast without
+revealing who voted what. **Trade-off:** denser result cards, with the detail kept behind
+a `<details>` so the ranking stays scannable.
+
+### 38. Budget follows the option count; 25 credits retired
+
+One real-world QV test gave voters 25 credits for 3 proposals, and many were left with
+credits they couldn't spend (whole votes cost 1, 4, 9…). The create form now marks a
+"best fit" budget (100 up to 6 options, 150 up to 12, 200 above) and keeps it in sync
+as options are added, until the creator picks one by hand. 25 is no longer offered for
+new polls; existing 25-credit polls still work. **Trade-off:** less creator control over
+tiny budgets, which nobody seemed to want and which caused the most leftover credits.
+
 ---
 
 ## Engineering
@@ -295,3 +339,24 @@ I removed all three and put `contact@quadratic-voting.com` in the footer as the 
 visitors. **Trade-off:** a voting tool gives up the trust signal of "read the code yourself",
 and this partly reverses #28, which counted on the open-source repo to bring in visitors on its own.
 A human inbox is a weaker transparency story, but it's a better way to hear from real users.
+
+### 39. One comparison page: a narrow reversal of "no SEO"
+
+#28 rejected heavy SEO as low-volume. The demand study sharpened that: there's almost no
+search for "quadratic voting", but there is for "dot voting" and team prioritization. So
+V2 adds exactly one evergreen page, [`/vs/dot-voting`](../../src/app/vs/dot-voting/page.tsx),
+plus a sitemap and robots.txt. It says plainly when dot voting is the better choice.
+**Trade-off:** partly reverses #28, kept to one page with no blog treadmill; more pages
+only if this one earns traffic.
+
+### 40. Voters are the channel: post-vote CTA + attribution
+
+A 2021 "Show HN" of a QV polling app got 4 points and 0 comments; launches don't carry this
+kind of product. What it does have for free: every poll reaches N voters, and the results
+page is the last thing they see. That page (and the "you already voted" page) now offers
+"Got a decision of your own?" with templates, linking to `/create?template=…&from=…`.
+`signup_start` records `from` and `template`; `signup_complete` records `wasVoter` (this
+browser's voter cookie has a ballot somewhere). Copying and exporting tokenized links now
+fires `shared`, closing the gap noted in #33. **Trade-off:** `wasVoter` undercounts, because
+tokenized voters never get the cookie, so the `from` parameter is the primary signal and
+`wasVoter` a lower bound.

@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import { db, schema } from '@/db';
 import { parseJson } from '@/lib/api';
 import { createPollSchema } from '@/lib/validators/poll';
+import { hasVotedAnywhere } from '@/lib/polls';
+import { getVoterId } from '@/lib/voter-cookie';
 import { trackServer, distinctIdFromCookie } from '@/growth-kit/server';
 
 export async function POST(request: Request) {
@@ -18,6 +20,7 @@ export async function POST(request: Request) {
         creditsPerVoter: input.creditsPerVoter,
         visibility: input.visibility,
         voterMode: input.voterMode,
+        ballotVisibility: input.ballotVisibility,
       })
       .returning();
 
@@ -53,10 +56,18 @@ export async function POST(request: Request) {
   const distinctId =
     distinctIdFromCookie(phKey ? store.get(`ph_${phKey}_posthog`)?.value : undefined) ??
     tokens.poll.id;
+  // wasVoter = this browser voted on someone else's poll before creating
+  // its own: the voter → creator loop we most want to grow.
+  const voterId = await getVoterId();
+  const wasVoter = voterId ? await hasVotedAnywhere(voterId) : false;
   await trackServer(distinctId, 'signup_complete', {
     method: 'poll_create',
     voterMode: tokens.poll.voterMode,
     visibility: tokens.poll.visibility,
+    ballotVisibility: tokens.poll.ballotVisibility,
+    optionCount: input.options.length,
+    creditsPerVoter: input.creditsPerVoter,
+    wasVoter,
   });
 
   const base = `/poll/${tokens.poll.id}`;

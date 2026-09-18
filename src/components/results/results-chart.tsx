@@ -1,16 +1,15 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Crown } from 'lucide-react';
+import { ChevronDown, Crown } from 'lucide-react';
+import type { ResultsOptionView } from '@/lib/results';
 
-interface Row {
-  id: string;
-  label: string;
-  netVotes: number;
-  creditsSpent: number;
-}
+type Row = Pick<
+  ResultsOptionView,
+  'id' | 'label' | 'netVotes' | 'creditsSpent' | 'supporters' | 'histogram'
+>;
 
-export function ResultsChart({ data }: { data: Row[] }) {
+export function ResultsChart({ data, voterCount }: { data: Row[]; voterCount: number }) {
   const maxAbs = Math.max(1, ...data.map((d) => Math.abs(d.netVotes)));
   const top = data[0];
 
@@ -70,12 +69,60 @@ export function ResultsChart({ data }: { data: Row[] }) {
                 }`}
               />
             </div>
-            <p className="relative z-10 mt-2 text-xs text-muted-foreground tabular-nums">
-              {r.creditsSpent} credits committed
-            </p>
+            <Breakdown row={r} voterCount={voterCount} />
           </li>
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * "Backed by N of M voters" plus an expandable histogram, so anyone can
+ * re-add the total by hand and tell broad support from one enthusiast.
+ */
+function Breakdown({ row, voterCount }: { row: Row; voterCount: number }) {
+  const backed = `Backed by ${row.supporters} of ${voterCount} ${voterCount === 1 ? 'voter' : 'voters'}`;
+
+  if (row.histogram.length === 0) {
+    return (
+      <p className="relative z-10 mt-2 text-xs text-muted-foreground tabular-nums">
+        {backed}
+      </p>
+    );
+  }
+
+  return (
+    <details className="group relative z-10 mt-2 text-xs text-muted-foreground">
+      <summary className="flex cursor-pointer list-none items-center gap-1 tabular-nums transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+        {backed} · {row.creditsSpent} credits
+        <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+        <span className="sr-only">Show how this total adds up</span>
+      </summary>
+      <div className="mt-2 rounded-xl bg-muted/50 p-3">
+        <p className="mb-1.5 font-medium text-foreground">How it adds up</p>
+        <ul className="space-y-1 tabular-nums" aria-label={`Vote breakdown for ${row.label}`}>
+          {row.histogram.map((h) => (
+            <li key={h.votes} className="flex justify-between gap-3">
+              <span>
+                {h.voters} {h.voters === 1 ? 'voter' : 'voters'} × {h.votes}{' '}
+                {h.votes === 1 ? 'vote' : 'votes'}
+              </span>
+              <span>
+                = {h.voters * h.votes} {h.voters * h.votes === 1 ? 'vote' : 'votes'} ·{' '}
+                {h.voters * h.votes * h.votes}{' '}
+                {h.voters * h.votes * h.votes === 1 ? 'credit' : 'credits'}
+              </span>
+            </li>
+          ))}
+          <li className="flex justify-between gap-3 border-t border-border/60 pt-1 font-medium text-foreground">
+            <span>Total</span>
+            <span>
+              {row.netVotes} votes · {row.creditsSpent} credits
+            </span>
+          </li>
+        </ul>
+      </div>
+    </details>
   );
 }

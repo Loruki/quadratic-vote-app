@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { creditCost } from '@/lib/quadratic';
+import { CreateYourOwn } from '@/components/results/create-your-own';
 
 interface Props {
   pollId: string;
@@ -58,6 +59,8 @@ export function AlreadyVotedSummary({ pollId, options, creditsPerVoter, allocati
           <Link href={`/poll/${pollId}/results`}>See results</Link>
         </Button>
       </div>
+
+      <CreateYourOwn source="voted" />
     </div>
   );
 }
